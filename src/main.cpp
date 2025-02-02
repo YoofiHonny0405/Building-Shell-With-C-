@@ -23,6 +23,9 @@ while (true)
       if(input.substr(5) == "echo" || input.substr(5) =="exit" ){
         std::cout << input.substr(5) << " is a shell builtin"<< std::endl;
       }
+      else {
+       std::cout << input << ": command not found" << std::endl;
+  }
   }
 
   if (input.rfind("echo ", 0) == 0) {
