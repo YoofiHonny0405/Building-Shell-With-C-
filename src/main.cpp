@@ -26,6 +26,9 @@ while (true)
       else {
        std::cout << command << ": not found" << std::endl;
   }
+  else if (input.rfind("echo ", 0) == 0) {
+            std::cout << input.substr(5) << std::endl;
+        }
   } else {
        std::cout << input << ": command not found" << std::endl;
   }
