@@ -24,7 +24,7 @@ while (true)
         std::cout << command << " is a shell builtin"<< std::endl;
       }
       else {
-       std::cout << input << ": not found" << std::endl;
+       std::cout << command << ": not found" << std::endl;
   }
   } else {
        std::cout << input << ": command not found" << std::endl;
