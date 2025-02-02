@@ -19,17 +19,13 @@ while (true)
   if(input.empty()) continue;
 
   if (input.rfind("type", 0) == 0){
-       
-      if(input.substr(5) == "echo" || input.substr(5) =="exit" ){
-        std::cout << input.substr(5) << " is a shell builtin"<< std::endl;
+       std::string command = input.substr(5);
+      if(command == "echo" || command =="exit" ){
+        std::cout << command << " is a shell builtin"<< std::endl;
       }
       else {
        std::cout << input << ": command not found" << std::endl;
   }
-  }
-
-  if (input.rfind("echo ", 0) == 0) {
-    std::cout << input.substr(5) << std::endl;
   } else {
        std::cout << input << ": command not found" << std::endl;
   }
