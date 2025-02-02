@@ -20,7 +20,7 @@ while (true)
 
   if (input.rfind("type", 0) == 0){
        std::string command = input.substr(5);
-      if(command == "echo" || command =="exit" ){
+      if(command == "echo" || command =="exit" || command == "type" ){
         std::cout << command << " is a shell builtin"<< std::endl;
       }
       else {
