@@ -21,7 +21,7 @@ while (true)
   if (input.rfind("type", 0) == 0){
        
       if(input.substr(5) == "echo" || input.substr(5) =="exit" ){
-        std::cout << input.substr(5) << " is a builtin"<< std::endl;
+        std::cout << input.substr(5) << " is a shell builtin"<< std::endl;
       }
   }
 
