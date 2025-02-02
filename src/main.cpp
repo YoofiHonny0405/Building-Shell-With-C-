@@ -5,11 +5,11 @@
 #include <cstdlib>
 #include <sstream>
 
-namspace fs =std::filesystem;
+namespace fs =std::filesystem;
 
-std::vector<std::string> split(const std: string& str,char delimiter){
+std::vector<std::string> split(const std::string& str,char delimiter){
   std::vector<std::string> tokens;
-  std::strinstream ss(str);
+  std::stringstream ss(str);
 
   std::string token;
   while(std::getline(ss, token, delimiter)){
@@ -25,7 +25,7 @@ std::string findExecutable(const std::string& command){
   if(!pathEnv) return "";
   std::vector<std::string> paths = split(pathEnv, ':');
 
-  fonr(const std::string& dir : paths){
+  for(const std::string& dir : paths){
     fs::path filePath = fs::path(dir)/comand;
     if(fs::exists(filePath) && fs::is_regular_file(filePath)&& access(filePath.c_str(), X_OK) == 0){
       return filePath.string();
@@ -55,7 +55,7 @@ while (true)
       if(command == "echo" || command =="exit" || command == "type" ){
         std::cout << command << " is a shell builtin"<< std::endl;
       }else{
-        std::strig execPath = findExecutable(command);
+        std::string execPath = findExecutable(command);
         if(!execPath.empty()){
           std::cout << command << " is " << execPath << std::endl;
         }else{
