@@ -18,6 +18,13 @@ while (true)
 
   if(input.empty()) continue;
 
+  if (input.rfind("type", 0) == 0){
+       
+      if(input.substr(5) == "echo" || input.substr(5) =="exit" ){
+        std::cout << input.substr(5) << " is a builtin"<< std::endl;
+      }
+  }
+
   if (input.rfind("echo ", 0) == 0) {
     std::cout << input.substr(5) << std::endl;
   } else {
