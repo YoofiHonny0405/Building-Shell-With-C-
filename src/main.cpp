@@ -15,12 +15,14 @@ while (true)
   std::string input;
   std::getline(std::cin, input);
   if(input == "exit 0"){break;}
-  if(input.rfind("echo",0)=0 )
-  {
-    std::cout << input.substr(5) <<std::endl;
+
+  if(input.empty()) continue;
+
+  if (input.rfind("echo ", 0) == 0) {
+    std::cout << input.substr(5) << std::endl;
+  } else {
+       std::cout << input << ": command not found" << std::endl;
   }
-  else if(input.empty()) continue;
-  std::cout << input << ": command not found" << std::endl;
   
 }
 
