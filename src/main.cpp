@@ -14,7 +14,8 @@ while (true)
   std::cout << "$ ";
   std::string input;
   std::getline(std::cin, input);
-  if(std::cin.eof()|| input.empty()) continue;
+  if(input == "exit 0"){break;}
+  if(input.empty()) continue;
   std::cout << input << ": command not found" << std::endl;
   
 }
