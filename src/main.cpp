@@ -23,7 +23,7 @@ std::vector<std::string> split(const std::string& str/*,char delimiter*/){
    bool inQuotes = false;
 
    for(size_t i =0; i< str.size(); i++){
-    char c = input[i];
+    char c = str[i];
     if(c=='\''){
       inQuotes = !inQuotes;
     }else if(std::isspace(c) && !inQuotes){
