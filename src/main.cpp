@@ -9,16 +9,21 @@
 
 namespace fs = std::filesystem;
 
-std::vector<std::string> split(const std::string& str, char delimiter){
-   std::vector<std::string> tokens;
+std::vector<std::string> split(const std::string& str/*,char delimiter*/){   
    std::stringstream ss(str);
    std::string token;
+   std::vector<std::string> tokens;
 
-   while (std::getline(ss, token, delimiter)){
+   /*while (std::getline(ss, token, delimiter)){
       if(!token.empty()){
         tokens.push_back(token);
       }
-   }
+   }*/
+
+    while(ss >> token){
+      tokens.push_back(token);
+    }
+
    return tokens;
 }
 
@@ -26,7 +31,7 @@ std::string findExecutable(const std::string& command){
   const char* pathEnv =std::getenv("PATH");
   if(!pathEnv) return "";
 
-  std::vector<std::string> paths = split(pathEnv, ':');
+  std::vector<std::string> paths = split(std::string(pathEnv)/*, ':'*/);
   for(const std::string& dir : paths){
     fs::path filePath = fs::path(dir)/command;
     if(fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0){
@@ -52,28 +57,57 @@ while (true)
   std::getline(std::cin, input);
   if(input == "exit 0"){break;}
 
-  if(input.empty()) continue;
 
-  if (input.rfind("type", 0) == 0){
+  std::vector<std::string> args = splitCommand(input);
+
+  if(args.empty()) continue;
+
+  std::string command = args[0];
+  if (command == "type"){
        std::string command = input.substr(5);
+      if(args.size() < 2){
+        std::cout << "type: missing argument" << std::endl;
+        continue;
+      }
+      std::string targetCommand = args[1];
       
-      if(builtins.count(command)){
-        std::cout << command << " is a shell builtin"<< std::endl;
+      if(builtins.count(targetCommand)){
+        std::cout << targetCommand << " is a shell builtin"<< std::endl;
       }
       else {
-       std::string execPath =findExecutable(command);
+       std::string execPath =findExecutable(targetCommand);
        if(!execPath.empty()){
-          std::cout << command << " is " << execPath << std::endl;
+          std::cout << targetCommand << " is " << execPath << std::endl;
        }else{
-          std::cout << command << ": not found"<<std::endl;
+          std::cout << targetCommand << ": not found"<<std::endl;
        }
     }
   
   } 
-  else if (input.rfind("echo ", 0) == 0) {
-            std::cout << input.substr(5) << std::endl;
+  else if (command=="echo") {
+            
+      for(size_t i = 1; i < args.size(); i++){
+        std::cout << args[i] << (i + 1 < args.size() ? " " : "");
+      }
+      std::cout << std::endl;
   } else {
-       std::cout << input << ": command not found" << std::endl;
+      pid_t pid = fork();
+      if(pid == -1){
+        std::cerr << "Failed to fork process" << std::endl;
+      }else if( pid == 0){
+        std:: vector <char*> execArgs;
+        for(auto& arg : args){
+          execArgs.push_back(const<char*>(arg.c_str()));
+        }
+        execArgs.push_back(nullptr);
+        if(execvp(execArgs[0], execArgs.data()) == -1){
+          std::cerr << command << ":command not found" << std::endl;
+          exit(EXIT_FAILURE);
+        }
+      }else{
+        int status;
+        waitpid(pid, &status, 0);
+      }
   }
   
 }
