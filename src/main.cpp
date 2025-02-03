@@ -55,7 +55,7 @@ while (true)
   if(input == "exit 0"){break;}
 
 
-  std::vector<std::string> args = split(input);
+  std::vector<std::string> args = split(input, ' ');
 
   if(args.empty()) continue;
 
