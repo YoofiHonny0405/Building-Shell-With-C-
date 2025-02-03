@@ -26,8 +26,8 @@ std::string findExecutable(const std::string& command){
   std::vector<std::string> paths = split(pathEnv, ':');
 
   for(const std::string& dir : paths){
-    fs::path filePath = fs::path(dir)/comand;
-    if(fs::exists(filePath) && fs::is_regular_file(filePath)&& access(filePath.c_str(), X_OK) == 0){
+    fs::path filePath = fs::path(dir)/command;
+    if(fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0){
       return filePath.string();
     }
   }
@@ -49,9 +49,9 @@ while (true)
   if(input == "exit 0"){break;}
 
   if(input.empty()) continue;
-
+   std::string command = input.substr(5);
   if (input.rfind("type", 0) == 0){
-       std::string command = input.substr(5);
+      // std::string command = input.substr(5);
       if(command == "echo" || command =="exit" || command == "type" ){
         std::cout << command << " is a shell builtin"<< std::endl;
       }else{
@@ -61,8 +61,7 @@ while (true)
         }else{
           std::cout << command << " : not found" << std::endl;
         }
-      }
-      else {
+      }else {
        std::cout << command << ": not found" << std::endl;
   }
   
