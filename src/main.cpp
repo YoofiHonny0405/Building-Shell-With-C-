@@ -7,31 +7,29 @@
 
 namespace fs =std::filesystem;
 
-std::vector<std::string> split(const std::string& str,char delimiter){
-  std::vector<std::string> tokens;
-  std::stringstream ss(str);
-
-  std::string token;
-  while(std::getline(ss, token, delimiter)){
-    if(!token.empty()){
-      tokens.push_back(token);
+std::vector<std::string> split(const std::string& str, char delimiter) {
+    std::vector<std::string> tokens;
+    std::stringstream ss(str);
+    std::string token;
+    while (std::getline(ss, token, delimiter)) {
+        if (!token.empty()) {
+            tokens.push_back(token);
+        }
     }
-  }
-  return tokens;
+    return tokens;
 }
+std::string findExecutable(const std::string& command) {
+    const char* pathEnv = std::getenv("PATH");
+    if (!pathEnv) return "";
 
-std::string findExecutable(const std::string& command){
-  const char* pathEnv = std::getenv("PATH");
-  if(!pathEnv) return "";
-  std::vector<std::string> paths = split(pathEnv, ':');
-
-  for(const std::string& dir : paths){
-    fs::path filePath = fs::path(dir)/command;
-    if(fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0){
-      return filePath.string();
+    std::vector<std::string> paths = split(pathEnv, ':');
+    for (const std::string& dir : paths) {
+        fs::path filePath = fs::path(dir) / command;
+        if (fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0) {
+            return filePath.string();
+        }
     }
-  }
-  return "";
+    return "";
 }
 int main() {
   // Flush after every std::cout / std:cerr
@@ -49,7 +47,8 @@ while (true)
   if(input == "exit 0"){break;}
 
   if(input.empty()) continue;
-   std::string command = input.substr(5);
+
+   
   if (input.rfind("type", 0) == 0){
       // std::string command = input.substr(5);
       if(command == "echo" || command =="exit" || command == "type" ){
@@ -61,8 +60,7 @@ while (true)
         }else{
           std::cout << command << " : not found" << std::endl;
         }
-      }else {
-       std::cout << command << ": not found" << std::endl;
+      }
   }
   
   } 
