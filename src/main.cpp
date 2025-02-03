@@ -4,9 +4,14 @@
 #include <filesystem>
 #include <cstdlib>
 #include <sstream>
+#include <climits>
 #include <unordered_set>
 #include <unistd.h>
 #include <sys/wait.h>
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 namespace fs = std::filesystem;
 
