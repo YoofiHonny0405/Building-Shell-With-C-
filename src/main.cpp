@@ -87,7 +87,7 @@ while (true)
 
   else if(command == "pwd"){
     char currentDir[PATH_MAX];
-    if(getcwd(currentDir, sizeOf(currentDir))){
+    if(getcwd(currentDir, sizeof(currentDir))){
       std::cout << currentDir << std::endl;
     }else{
       std::cerr << "Error getting current directory" << std::endl;
