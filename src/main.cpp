@@ -107,7 +107,7 @@ while (true)
     }
       const char* targetDir =args[1].c_str();
       if(chdir(targetDir)!=0){
-        std::cerr<< "cd" << targetDir << ": No such file or directory" << std::endl;
+        std::cerr<< "cd: " << targetDir << ": No such file or directory" << std::endl;
       }
 
   }
