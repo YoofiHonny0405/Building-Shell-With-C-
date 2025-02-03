@@ -114,7 +114,7 @@ while (true)
         }
         targetDir =homeDir;
       }
-      if(chdir(targetDir)!=0){
+      if(chdir(targetDir.c_str())!=0){
         std::cerr<< "cd: " << targetDir << ": No such file or directory" << std::endl;
       }
 
