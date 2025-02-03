@@ -26,9 +26,9 @@ std::vector<std::string> split(const std::string& str/*,char delimiter*/){
     char c = input[i];
     if(c=='\''){
       inQuotes = !inQuotes;
-    }else if(std::isspace(c) && !inQoutes){
+    }else if(std::isspace(c) && !inQuotes){
         if(!token.empty()){
-          token.push_back(token);
+          tokens.push_back(token);
           token.clear();
         }
     }else{
@@ -47,7 +47,7 @@ std::string findExecutable(const std::string& command){
   const char* pathEnv =std::getenv("PATH");
   if(!pathEnv) return "";
 
-  std::vector<std::string> paths = split(std::string(pathEnv), ':');
+  std::vector<std::string> paths = split(std::string(pathEnv));
   for(const std::string& dir : paths){
     fs::path filePath = fs::path(dir)/command;
     if(fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0){
@@ -76,7 +76,7 @@ while (true)
   if(input == "exit 0"){break;}
 
 
-  std::vector<std::string> args = split(input, ' ');
+  std::vector<std::string> args = split(input);
 
   if(args.empty()) continue;
 
