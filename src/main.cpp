@@ -105,7 +105,7 @@ while (true)
       std::cerr << "cd: missing argument" << std::endl;
       continue;
     }
-      const char* targetDir =args[1].c_str();
+      std::string targetDir =args[1];
       if(targetDir == "~"){
         const char* homeDir = std::getenv("HOME");
         if(!homeDir){
