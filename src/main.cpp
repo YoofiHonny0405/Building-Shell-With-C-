@@ -6,6 +6,7 @@
 #include <sstream>
 #include <unordered_set>
 #include <unistd.h>
+#include <sys/wait.h>
 
 namespace fs = std::filesystem;
 
