@@ -99,7 +99,7 @@ while (true)
         }
         execArgs.push_back(nullptr);
         if(execvp(execArgs[0], execArgs.data()) == -1){
-          std::cerr << command << ":command not found" << std::endl;
+          std::cerr << command << ": command not found" << std::endl;
           exit(EXIT_FAILURE);
         }
       }else{
