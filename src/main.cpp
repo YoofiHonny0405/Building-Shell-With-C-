@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 
 std::vector<std::string> split(const std::string& str, char delimiter){
    std::vector<std::string> tokens;
-   std::stringsstream ss(str);
+   std::stringstream ss(str);
    std::string token;
 
    while (std::getlines(ss, token, delimiter)){
@@ -23,14 +23,14 @@ std::vector<std::string> split(const std::string& str, char delimiter){
 }
 
 std::string findExecutable(const std::string& command){
-  const char* pathenv =std::getenv("PATH");
+  const char* pathEnv =std::getenv("PATH");
   if(!pathEnv) return "";
 
   std::vector<std::string> paths = split(pathEnv, ':');
   for(const std::string& dir : paths){
     fs::path filePath = fs::path(dir)/command;
-    if(fs::exists(filePath) && fs::is_regular_file(filepath) && access(filePath.c_str(), X_OK) == 0){
-      return filepath.string();
+    if(fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0){
+      return filePath.string();
     }
   }
   return "";
