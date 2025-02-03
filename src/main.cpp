@@ -14,7 +14,7 @@ std::vector<std::string> split(const std::string& str, char delimiter){
    std::stringstream ss(str);
    std::string token;
 
-   while (std::getlines(ss, token, delimiter)){
+   while (std::getline(ss, token, delimiter)){
       if(!token.empty()){
         tokens.push_back(token);
       }
