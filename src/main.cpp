@@ -50,7 +50,7 @@ int main() {
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
 
-  std::unordered_set<std::string> builtins = {"echo", "exit","type"};
+  std::unordered_set<std::string> builtins = {"echo", "exit","type", "pwd"};
   // Uncomment this block to pass the first stage
    
    
