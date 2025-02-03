@@ -64,8 +64,9 @@ while (true)
   if(args.empty()) continue;
 
   std::string command = args[0];
+
   if (command == "type"){
-       std::string command = input.substr(5);
+       //std::string command = input.substr(5);
       if(args.size() < 2){
         std::cout << "type: missing argument" << std::endl;
         continue;
