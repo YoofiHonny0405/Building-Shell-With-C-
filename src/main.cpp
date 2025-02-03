@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <cerrno>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -50,7 +51,7 @@ int main() {
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
 
-  std::unordered_set<std::string> builtins = {"echo", "exit","type", "pwd"};
+  std::unordered_set<std::string> builtins = {"echo", "exit","type", "pwd","cd"};
   // Uncomment this block to pass the first stage
    
    
@@ -97,6 +98,18 @@ while (true)
     }else{
       std::cerr << "Error getting current directory" << std::endl;
     }
+  }
+
+  else if(command == "cd"){
+    if(args.size() < 2){
+      std::cerr << "cd: missing argument" << std::endl;
+      continue;
+    }
+      const char* targetDir =args[1].c_str();
+      if(chdir(targetDir)!=0){
+        std::cerr<< "cd" << targetDir << ": No such file or directory" << std::endl;
+      }
+
   }
 
   else if (command=="echo") {
