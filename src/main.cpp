@@ -106,11 +106,11 @@ while (true)
       continue;
     }
       const char* targetDir =args[1].c_str();
-      if(yargetDir == "~"){
-        const char* homedir = std::getenv("HOME");
+      if(targetDir == "~"){
+        const char* homeDir = std::getenv("HOME");
         if(!homeDir){
           std::cerr << "cd: HOME not set" << std::endl;
-          continue
+          continue;
         }
         targetDir =homeDir;
       }
