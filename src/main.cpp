@@ -58,7 +58,7 @@ while (true)
   if(input == "exit 0"){break;}
 
 
-  std::vector<std::string> args = splitCommand(input);
+  std::vector<std::string> args = split(input);
 
   if(args.empty()) continue;
 
@@ -97,7 +97,7 @@ while (true)
       }else if( pid == 0){
         std:: vector <char*> execArgs;
         for(auto& arg : args){
-          execArgs.push_back(const<char*>(arg.c_str()));
+          execArgs.push_back(const_cast<char*>(arg.c_str()));
         }
         execArgs.push_back(nullptr);
         if(execvp(execArgs[0], execArgs.data()) == -1){
