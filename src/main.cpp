@@ -16,16 +16,29 @@
 
 namespace fs = std::filesystem;
 
-std::vector<std::string> split(const std::string& str,char delimiter){   
+std::vector<std::string> split(const std::string& str/*,char delimiter*/){   
    std::stringstream ss(str);
    std::string token;
    std::vector<std::string> tokens;
+   bool inQuotes = false;
 
-   while (std::getline(ss, token, delimiter)){
-      if(!token.empty()){
-        tokens.push_back(token);
-      }
+   for(size_t i =0; i< str.size(); i++){
+    char c = input[i];
+    if(c=='\''){
+      inQuotes = !inQuotes;
+    }else if(std::isspace(c) && !inQoutes){
+        if(!token.empty()){
+          token.push_back(token);
+          token.clear();
+        }
+    }else{
+      token +=c;
+    }
    }
+   if(!token.empty()){
+    tokens.push_back(token);
+   }
+   
 
    return tokens;
 }
@@ -112,7 +125,7 @@ while (true)
           std::cerr << "cd: HOME not set" << std::endl;
           continue;
         }
-        targetDir =homeDir;
+        targetDir = homeDir;
       }
       if(chdir(targetDir.c_str())!=0){
         std::cerr<< "cd: " << targetDir << ": No such file or directory" << std::endl;
