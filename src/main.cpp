@@ -106,6 +106,14 @@ while (true)
       continue;
     }
       const char* targetDir =args[1].c_str();
+      if(yargetDir == "~"){
+        const char* homedir = std::getenv("HOME");
+        if(!homeDir){
+          std::cerr << "cd: HOME not set" << std::endl;
+          continue
+        }
+        targetDir =homeDir;
+      }
       if(chdir(targetDir)!=0){
         std::cerr<< "cd: " << targetDir << ": No such file or directory" << std::endl;
       }
