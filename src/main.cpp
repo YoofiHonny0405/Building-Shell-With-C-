@@ -38,6 +38,8 @@ std::string findExecutable(const std::string& command){
   return "";
 }
 
+
+
 int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
@@ -82,6 +84,16 @@ while (true)
     }
   
   } 
+
+  else if(command == "pwd"){
+    char currentDir[PATH_MAX];
+    if(getcwd(currentDir, sizeOf(currentDir))){
+      std::cout << currentDir << std::endl;
+    }else{
+      std::cerr << "Error getting current directory" << std::endl;
+    }
+  }
+
   else if (command=="echo") {
             
       for(size_t i = 1; i < args.size(); i++){
