@@ -27,7 +27,7 @@ std::vector<std::string> split(const std::string& str,char delimiter){
 
    for(size_t i =0; i< str.size(); i++){
     char c = str[i];
-    if((c=='\''|| c=='"') && (quoteChare == '\0' || quoteChar == c)){
+    if((c=='\''|| c=='"') && (quoteChar == '\0' || quoteChar == c)){
       inQuotes = !inQuotes;
       quoteChar = inQuotes ? c : '\0';
     }else if(c == delimiter && !inQuotes){
