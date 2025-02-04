@@ -16,12 +16,6 @@
 
 namespace fs = std::filesystem;
 
-/*std:string trimQuotes(const std::string& str){
-  if(str.size() >= 2 && (str.front() == '"' || str.front() == '\'') && str.back() == str.front()){
-    return str.substr(1,str.size() -2);
-  }
-  return str;
-}*/
 
 std::vector<std::string> split(const std::string& str,char delimiter){   
    std::stringstream ss(str);
@@ -30,16 +24,12 @@ std::vector<std::string> split(const std::string& str,char delimiter){
    bool inQuotes = false;
    char quoteChar ='\0';
 
-   /*while(std::getline(ss,token,delimiter)){
-    if(!token.empty()){
-      tokens.push_back(token);
-    }
-   }*/
 
    for(size_t i =0; i< str.size(); i++){
     char c = str[i];
-    if((c=='\''|| c=='"')){
+    if((c=='\''|| c=='"') && (quoteChare == '\0' || quoteChar == c)){
       inQuotes = !inQuotes;
+      quoteChar = inQuotes ? c : '\0';
     }else if(c == delimiter && !inQuotes){
         if(!token.empty()){
           tokens.push_back(token);
