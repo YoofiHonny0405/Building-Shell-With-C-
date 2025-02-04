@@ -21,17 +21,18 @@ std::vector<std::string> split(const std::string& str,char delimiter){
    std::string token;
    std::vector<std::string> tokens;
    bool inQuotes = false;
+   char quoteChar ='\0';
 
    for(size_t i =0; i< str.size(); i++){
     char c = str[i];
-    if(c=='\''){
+    if((c=='\''|| c=='"')){
       inQuotes = !inQuotes;
     }else if(c == delimiter && !inQuotes){
         if(!token.empty()){
           tokens.push_back(token);
           token.clear();
         }
-    }else{
+    }    else{
       token +=c;
     }
    }
