@@ -156,7 +156,7 @@ while (true)
             
       for(size_t i = 1; i < args.size(); i++){
         std::cout << args[i];
-        if(i+1>args.size()) std::cout << " ";
+        if(i+1<args.size()) std::cout << " ";
       }
       std::cout << std::endl;
 
