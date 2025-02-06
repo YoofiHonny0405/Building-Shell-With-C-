@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <cerrno>
+#include <fstream>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
