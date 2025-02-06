@@ -98,6 +98,8 @@ while (true)
   if(args.empty()) continue;
 
   std::string command = args[0];
+  
+  bool should_print_prompt = true;
 
   if (command == "type"){
        //std::string command = input.substr(5);
@@ -158,6 +160,7 @@ while (true)
             std::cout << line; // Do not add extra newlines
         }
     }
+    should_print_prompt = false;
 }
 
   else if(command == "cd"){
@@ -220,6 +223,10 @@ while (true)
         waitpid(pid, &status, 0);
       }
   }
+  if (!should_print_prompt) {
+        std::cout << std::flush;  // Ensure output is flushed
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');  // Clear any remaining input
+    }
   
 }
 
