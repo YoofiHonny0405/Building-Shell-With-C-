@@ -208,13 +208,15 @@ while (true)
         bool inEscapeSequence = false;
         
         for(char c : word){
-          if(inEscapeSequence){
+          if(escapeNext){
             token += c;
-            inEscapeSequence = false;
+            escapeNext = false;
           }else if(c == '\\'){
-            inEscapeSequence = true;
+            escapeNext = true;
           }else if(c ==' ' && token.empty()){
-              continue;
+              if(!token.empty() && token.back() != ' '){
+                token += ' ';
+              }
           }else {
             token += c; 
           }
