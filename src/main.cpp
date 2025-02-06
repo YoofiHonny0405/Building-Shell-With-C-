@@ -60,19 +60,29 @@ std::vector<std::string> split(const std::string& str) {
 
 
 
-std::string findExecutable(const std::string& command){
-  const char* pathEnv =std::getenv("PATH");
-  if(!pathEnv) return "";
+std::string findExecutable(const std::string& command) {
+    const char* pathEnv = std::getenv("PATH");
+    if (!pathEnv) return "";
 
-  std::vector<std::string> paths = split(std::string(pathEnv)/*,':'*/);
-  for(const std::string& dir : paths){
-    fs::path filePath = fs::path(dir)/command;
-    if(fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0){
-      return filePath.string();
+    std::vector<std::string> paths = split(std::string(pathEnv));
+    for (const std::string& dir : paths) {
+        fs::path filePath = fs::path(dir) / command;
+
+        // Use realpath to resolve symlinks if necessary
+        char resolvedPath[PATH_MAX];
+        if (realpath(filePath.c_str(), resolvedPath)) {
+            fs::path realFilePath(resolvedPath);
+
+            if (fs::exists(realFilePath) && fs::is_regular_file(realFilePath) &&
+                access(realFilePath.c_str(), X_OK) == 0) {
+                return realFilePath.string();  // Return the resolved path
+            }
+        }
     }
-  }
-  return "";
+
+    return "";  // Executable not found
 }
+
 
 
 
