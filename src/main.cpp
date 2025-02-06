@@ -180,15 +180,24 @@ while (true)
 
   }
 
-  else if (command=="echo") {
-            
-      for(size_t i = 1; i < args.size(); i++){
-        std::cout << args[i];
-        if(i+1<args.size()) std::cout << " ";
-      }
-      std::cout << std::endl;
-
-  } else {
+  else if (command == "echo") {
+    std::string output;
+    for (size_t i = 1; i < args.size(); ++i) {
+        if (i > 1) output += " ";
+        std::string arg = args[i];
+        
+        // Handle escaped spaces
+        size_t pos = 0;
+        while ((pos = arg.find("\\ ", pos)) != std::string::npos) {
+            arg.replace(pos, 2, " ");
+            pos += 1;
+        }
+        
+        output += arg;
+    }
+    std::cout << output << std::endl;
+}
+ else {
       pid_t pid = fork();
       if(pid == -1){
         std::cerr << "Failed to fork process" << std::endl;
