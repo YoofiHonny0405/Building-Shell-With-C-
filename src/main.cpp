@@ -28,11 +28,11 @@ std::vector<std::string> split(const std::string& str,char delimiter){
    for(size_t i =0; i< str.size(); i++){
     char c = str[i];
     if(escapeNext){
-      current +=c ;
+      token +=c ;
       escapeNext = false;
     }else if(c == '\\'){
       escapeNext = true;
-    }else if(c == '\'' && !inDoubleQuote){
+    }else if(c == '\'' && !inDoubleQuotes){
       inQuotes = !inQuotes;
     }else if(c =='"' && !inQuotes){
       inDoubleQuotes = !inDoubleQuotes;
@@ -158,7 +158,7 @@ while (true)
         std::cout << args[i] << (i + 1 < args.size() ? " " : "");
       }
       std::cout << std::endl;
-      
+
   } else {
       pid_t pid = fork();
       if(pid == -1){
