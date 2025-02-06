@@ -21,13 +21,28 @@ std::vector<std::string> split(const std::string& str,char delimiter){
    std::stringstream ss(str);
    std::string token;
    std::vector<std::string> tokens;
-   bool inQuotes = false;
+   bool inQuotes = false, inDoubleQuotes = false, escapeNext = false;
    char quoteChar ='\0';
 
 
    for(size_t i =0; i< str.size(); i++){
     char c = str[i];
-    if((c=='\''|| c=='"') && (quoteChar == '\0' || quoteChar == c)){
+    if(escapeNext){
+      current +=c ;
+      escapeNext = false;
+    }else if(c == '\\'){
+      escapeNext = true;
+    }else if(c == '\'' && !inDoubleQuote){
+      inQuotes = !inQuotes;
+    }else if(c =='"' && !inQuotes){
+      inDoubleQuotes = !inDoubleQuotes;
+    }else if(c == ' ' && !inQuotes && !inDoubleQuotes){
+        if(!token.empty()){
+          tokens.push_back(token);
+          token.clear();
+        }
+    }
+    /*if((c=='\''|| c=='"') && (quoteChar == '\0' || quoteChar == c)){
       inQuotes = !inQuotes;
       quoteChar = inQuotes ? c : '\0';
     }else if(c == delimiter && !inQuotes){
@@ -35,7 +50,7 @@ std::vector<std::string> split(const std::string& str,char delimiter){
           tokens.push_back(token);
           token.clear();
         }
-    }    else{
+    }*/ else{
       token +=c;
     }
    }
@@ -143,6 +158,7 @@ while (true)
         std::cout << args[i] << (i + 1 < args.size() ? " " : "");
       }
       std::cout << std::endl;
+      
   } else {
       pid_t pid = fork();
       if(pid == -1){
