@@ -143,7 +143,17 @@ while (true)
             filePath = filePath.substr(1, filePath.size() - 2);
         }
 
-        std::ifstream file(filePath);
+        // Unescape the filename
+        std::string unescapedPath;
+        for (size_t j = 0; j < filePath.size(); ++j) {
+            if (filePath[j] == '\\' && j + 1 < filePath.size()) {
+                unescapedPath += filePath[++j];
+            } else {
+                unescapedPath += filePath[j];
+            }
+        }
+
+        std::ifstream file(unescapedPath);
         if (!file) {
             std::cerr << "cat: " << filePath << ": No such file or directory" << std::endl;
             continue;
@@ -154,7 +164,8 @@ while (true)
             std::cout << line << std::endl;
         }
     }
-}else if(command == "cd"){
+}
+  else if(command == "cd"){
     if(args.size() < 2){
       std::cerr << "cd: missing argument" << std::endl;
       continue;
