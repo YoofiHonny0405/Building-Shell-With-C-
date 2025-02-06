@@ -19,7 +19,7 @@
 namespace fs = std::filesystem;
 
 
-std::vector<std::string> split(const std::string& str,char delimiter){   
+std::vector<std::string> split(const std::string& str/*,char delimiter*/){   
    std::stringstream ss(str);
    std::string token;
    std::vector<std::string> tokens;
@@ -29,7 +29,6 @@ std::vector<std::string> split(const std::string& str,char delimiter){
 
    for(size_t i =0; i< str.size(); i++){
     char c = str[i];
-
     if(escapeNext){
       token +=c ;
       escapeNext = false;
@@ -39,13 +38,7 @@ std::vector<std::string> split(const std::string& str,char delimiter){
 
     }else if(c == '\''){
 
-      if(!inDoubleQuotes) {
-        if(inQuotes){
-          inQuotes = false;
-        }else{
-          inQuotes = true;
-        }
-      }
+      if(!inDoubleQuotes) inQuotes = !inQuotes;
       else token += c;
 
     }else if(c == '\"'){
@@ -53,33 +46,30 @@ std::vector<std::string> split(const std::string& str,char delimiter){
       if(!inQuotes) inDoubleQuotes = !inDoubleQuotes;
       else token += c;
       
-    }else if(c =='"' && !inQuotes){
-      if(!inQuotes){
-        if(inDoubleQuotes){
-          inDoubleQuotes = false;
-        }else{
-        inDoubleQuotes = true;
-      }
-      }else token += c;
-    }else if(c == ' ' && !inQuotes && !inDoubleQuotes){
+    }/*else if(c =='"' && !inQuotes){
+      inDoubleQuotes = !inDoubleQuotes;
+    }*/else if(c == ' ' && !inQuotes && !inDoubleQuotes){
         if(!token.empty()){
           tokens.push_back(token);
           token.clear();
         }
     }
-    if((c=='\''|| c=='"') && (quoteChar == '\0' || quoteChar == c)){
+    /*if((c=='\''|| c=='"') && (quoteChar == '\0' || quoteChar == c)){
       inQuotes = !inQuotes;
       quoteChar = inQuotes ? c : '\0';
-    }else if(c == delimiter && !inQuotes && !inDoubleQuotes){
+    }else if(c == delimiter && !inQuotes){
         if(!token.empty()){
           tokens.push_back(token);
           token.clear();
         }
-    } else{
+    }*/ else{
       token +=c;
     }
    }
    if(!token.empty())tokens.push_back(token);
+   
+   
+
    return tokens;
 }
 
@@ -87,7 +77,7 @@ std::string findExecutable(const std::string& command){
   const char* pathEnv =std::getenv("PATH");
   if(!pathEnv) return "";
 
-  std::vector<std::string> paths = split(std::string(pathEnv),':');
+  std::vector<std::string> paths = split(std::string(pathEnv)/*,':'*/);
   for(const std::string& dir : paths){
     fs::path filePath = fs::path(dir)/command;
     if(fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0){
@@ -116,7 +106,7 @@ while (true)
   if(input == "exit 0"){break;}
 
 
-  std::vector<std::string> args = split(input, ' ');
+  std::vector<std::string> args = split(input/*, ' '*/);
 
   if(args.empty()) continue;
 
@@ -199,34 +189,12 @@ while (true)
   }
 
   else if (command=="echo") {
-      std::string output; 
-      bool escapeNext = false;
-
+            
       for(size_t i = 1; i < args.size(); i++){
-        std::string word = args[i];
-        std::string token;
-        bool inEscapeSequence = false;
-        
-        for(char c : word){
-          if(escapeNext){
-            token += c;
-            escapeNext = false;
-          }else if(c == '\\'){
-            escapeNext = true;
-          }else if(c ==' ' && token.empty()){
-              if(!token.empty() && token.back() != ' '){
-                token += ' ';
-              }
-          }else {
-            token += c; 
-          }
-        }
-        if(!output.empty()){
-          output += " ";
-        }
-        output += token;
+        std::cout << args[i];
+        if(i+1<args.size()) std::cout << " ";
       }
-      std::cout << output << std::endl;
+      std::cout << std::endl;
 
   } else {
       pid_t pid = fork();
