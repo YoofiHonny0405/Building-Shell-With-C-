@@ -19,59 +19,43 @@
 namespace fs = std::filesystem;
 
 
-std::vector<std::string> split(const std::string& str/*,char delimiter*/){   
-   std::stringstream ss(str);
-   std::string token;
-   std::vector<std::string> tokens;
-   bool inQuotes = false, inDoubleQuotes = false, escapeNext = false;
-   char quoteChar ='\0';
+std::vector<std::string> split(const std::string& str) {
+    std::vector<std::string> tokens;
+    std::string token;
+    bool inQuotes = false;
+    char quoteChar = '\0';
 
-
-   for(size_t i =0; i< str.size(); i++){
-    char c = str[i];
-    if(escapeNext){
-      token +=c ;
-      escapeNext = false;
-    }else if(c == '\\'){
-
-      escapeNext = true;
-
-    }else if(c == '\''){
-
-      if(!inDoubleQuotes) inQuotes = !inQuotes;
-      else token += c;
-
-    }else if(c == '\"'){
-
-      if(!inQuotes) inDoubleQuotes = !inDoubleQuotes;
-      else token += c;
-      
-    }/*else if(c =='"' && !inQuotes){
-      inDoubleQuotes = !inDoubleQuotes;
-    }*/else if(c == ' ' && !inQuotes && !inDoubleQuotes){
-        if(!token.empty()){
-          tokens.push_back(token);
-          token.clear();
+    for (size_t i = 0; i < str.size(); ++i) {
+        char c = str[i];
+        if (c == '\\' && i + 1 < str.size()) {
+            token += str[++i];  // Add the next character literally
+        } else if (c == '\'' || c == '"') {
+            if (inQuotes && c == quoteChar) {
+                inQuotes = false;
+                quoteChar = '\0';
+            } else if (!inQuotes) {
+                inQuotes = true;
+                quoteChar = c;
+            } else {
+                token += c;
+            }
+        } else if (c == ' ' && !inQuotes) {
+            if (!token.empty()) {
+                tokens.push_back(token);
+                token.clear();
+            }
+        } else {
+            token += c;
         }
     }
-    /*if((c=='\''|| c=='"') && (quoteChar == '\0' || quoteChar == c)){
-      inQuotes = !inQuotes;
-      quoteChar = inQuotes ? c : '\0';
-    }else if(c == delimiter && !inQuotes){
-        if(!token.empty()){
-          tokens.push_back(token);
-          token.clear();
-        }
-    }*/ else{
-      token +=c;
-    }
-   }
-   if(!token.empty())tokens.push_back(token);
-   
-   
 
-   return tokens;
+    if (!token.empty()) {
+        tokens.push_back(token);
+    }
+
+    return tokens;
 }
+
 
 std::string findExecutable(const std::string& command){
   const char* pathEnv =std::getenv("PATH");
@@ -143,32 +127,34 @@ while (true)
     }
   }
 
-  else if(command == "cat"){
-    if(args.size() < 2){
-      std::cerr << "cd: missing argument" << std::endl;
-      continue;
-    }
-
-    for(size_t i = 1; i < args.size(); i++){
-      std::string filePath = args[i];
-
-      if(!filePath.empty() && ((filePath.front() == '"' && filePath.back() == '"') || (filePath.front() == '\'' && filePath.back() == '\''))){
-          filePath = filePath.substr(1, filePath.size() - 2);
-      }
-
-      std::ifstream file(filePath);
-      if(!file){
-        std::cerr<< "cat: " << filePath << ": No such file or directory" << std::endl;
+  else if (command == "cat") {
+    if (args.size() < 2) {
+        std::cerr << "cat: missing file operand" << std::endl;
         continue;
-      }
-      std:: string line;
-      while(std::getline(file, line)){
-        std::cout << line <<std::endl;
-      }
     }
-  }
 
-  else if(command == "cd"){
+    for (size_t i = 1; i < args.size(); ++i) {
+        std::string filePath = args[i];
+        
+        // Remove surrounding quotes if present
+        if (filePath.size() >= 2 && 
+            ((filePath.front() == '"' && filePath.back() == '"') || 
+             (filePath.front() == '\'' && filePath.back() == '\''))) {
+            filePath = filePath.substr(1, filePath.size() - 2);
+        }
+
+        std::ifstream file(filePath);
+        if (!file) {
+            std::cerr << "cat: " << filePath << ": No such file or directory" << std::endl;
+            continue;
+        }
+
+        std::string line;
+        while (std::getline(file, line)) {
+            std::cout << line << std::endl;
+        }
+    }
+}else if(command == "cd"){
     if(args.size() < 2){
       std::cerr << "cd: missing argument" << std::endl;
       continue;
