@@ -199,18 +199,22 @@ while (true)
   }
 
   else if (command=="echo") {
-      std::string output;      
+      std::string output; 
+      bool escapeNext = false;
+
       for(size_t i = 1; i < args.size(); i++){
         std::string word = args[i];
         std::string token;
-
-        bool escapeNext = false;
+        bool inEscapeSequence = false;
+        
         for(char c : word){
-          if(escapeNext){
+          if(inEscapeSequence){
             token += c;
-            escapeNext = false;
+            inEscapeSequence = false;
           }else if(c == '\\'){
-            escapeNext = true;
+            inEscapeSequence = true;
+          }else if(c ==' ' && token.empty()){
+              continue;
           }else {
             token += c; 
           }
