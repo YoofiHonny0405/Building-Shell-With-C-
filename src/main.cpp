@@ -141,6 +141,30 @@ while (true)
     }
   }
 
+  else if(command == "cat"){
+    if(args.size() < 2){
+      std::cerr << "cd: missing argument" << std::endl;
+      continue;
+    }
+
+    for(size_t i = 1; i < args.size(); i++){
+      std::string filePath = args[i];
+
+      if((filePath.front() = '"' && filePath.back()== '"') || (filePath.front() == '\'' && filePath.back() == '\'')){
+        filePath = filePath.substr(1, filePath.size() -2);
+      }
+      std::ifstream file(filePath);
+      if(!file){
+        std::cerr<< "cat: " << filePath << ": No such file or directory" << std::endl;
+        continue;
+      }
+      std:: string line;
+      while(std::getline(file, line)){
+        std::cout << line <<std::endl;
+      }
+    }
+  }
+
   else if(command == "cd"){
     if(args.size() < 2){
       std::cerr << "cd: missing argument" << std::endl;
