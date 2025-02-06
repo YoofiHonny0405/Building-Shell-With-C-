@@ -17,7 +17,7 @@
 namespace fs = std::filesystem;
 
 
-std::vector<std::string> split(const std::string& str,char delimiter){   
+std::vector<std::string> split(const std::string& str/*,char delimiter*/){   
    std::stringstream ss(str);
    std::string token;
    std::vector<std::string> tokens;
@@ -28,13 +28,7 @@ std::vector<std::string> split(const std::string& str,char delimiter){
    for(size_t i =0; i< str.size(); i++){
     char c = str[i];
     if(escapeNext){
-      switch(c){
-          case 'n': token +='\n'; break;
-          case 't': token +='\t'; break;
-          case '\'': token +='\''; break;
-          case '\"': token +='\"'; break;
-          default:token +=c ;
-      }
+      token +=c ;
       escapeNext = false;
     }else if(c == '\\'){
       escapeNext = true;
@@ -72,7 +66,7 @@ std::string findExecutable(const std::string& command){
   const char* pathEnv =std::getenv("PATH");
   if(!pathEnv) return "";
 
-  std::vector<std::string> paths = split(std::string(pathEnv),':');
+  std::vector<std::string> paths = split(std::string(pathEnv)/*,':'*/);
   for(const std::string& dir : paths){
     fs::path filePath = fs::path(dir)/command;
     if(fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0){
@@ -101,7 +95,7 @@ while (true)
   if(input == "exit 0"){break;}
 
 
-  std::vector<std::string> args = split(input, ' ');
+  std::vector<std::string> args = split(input/*, ' '*/);
 
   if(args.empty()) continue;
 
@@ -161,7 +155,8 @@ while (true)
   else if (command=="echo") {
             
       for(size_t i = 1; i < args.size(); i++){
-        std::cout << args[i] << (i + 1 < args.size() ? " " : "");
+        std::cout << args[i];
+        if(i+1>args.size()) std::cout << " ";
       }
       std::cout << std::endl;
 
