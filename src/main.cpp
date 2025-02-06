@@ -29,6 +29,7 @@ std::vector<std::string> split(const std::string& str/*,char delimiter*/){
 
    for(size_t i =0; i< str.size(); i++){
     char c = str[i];
+
     if(escapeNext){
       token +=c ;
       escapeNext = false;
@@ -38,7 +39,13 @@ std::vector<std::string> split(const std::string& str/*,char delimiter*/){
 
     }else if(c == '\''){
 
-      if(!inDoubleQuotes) inQuotes = !inQuotes;
+      if(!inDoubleQuotes) {
+        if(inQuotes){
+          inQuotes = false;
+        }else{
+          inQuotes = true;
+        }
+      }
       else token += c;
 
     }else if(c == '\"'){
@@ -67,9 +74,6 @@ std::vector<std::string> split(const std::string& str/*,char delimiter*/){
     }
    }
    if(!token.empty())tokens.push_back(token);
-   
-   
-
    return tokens;
 }
 
