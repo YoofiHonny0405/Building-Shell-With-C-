@@ -152,9 +152,10 @@ while (true)
     for(size_t i = 1; i < args.size(); i++){
       std::string filePath = args[i];
 
-      if((filePath.front() = '"' && filePath.back()== '"') || (filePath.front() == '\'' && filePath.back() == '\'')){
-        filePath = filePath.substr(1, filePath.size() -2);
+      if((filePath.front() == '"' && filePath.back() == '"') || (filePath.front() == '\'' && filePath.back() == '\'')){
+          filePath = filePath.substr(1, filePath.size() - 2);
       }
+
       std::ifstream file(filePath);
       if(!file){
         std::cerr<< "cat: " << filePath << ": No such file or directory" << std::endl;
