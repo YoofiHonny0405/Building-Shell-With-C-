@@ -87,7 +87,7 @@ int main() {
    
 while (true)
 {
-  std::cout << "$ ";
+  std::cout << "$ "<<std::flush;
   std::string input;
   std::getline(std::cin, input);
   if(input == "exit 0"){break;}
@@ -99,7 +99,6 @@ while (true)
 
   std::string command = args[0];
   
-  bool should_print_prompt = true;
 
   if (command == "type"){
        //std::string command = input.substr(5);
@@ -160,7 +159,7 @@ while (true)
             std::cout << line; // Do not add extra newlines
         }
     }
-    should_print_prompt = false;
+    std::cout << std::flush;
 }
 
   else if(command == "cd"){
@@ -223,10 +222,6 @@ while (true)
         waitpid(pid, &status, 0);
       }
   }
-  if (!should_print_prompt) {
-        std::cout << std::flush;  // Ensure output is flushed
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');  // Clear any remaining input
-    }
   
 }
 
