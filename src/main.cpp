@@ -87,7 +87,7 @@ int main() {
    
 while (true)
 {
-  std::cout << "$ "<<std::flush;
+  std::cout << "$ ";
   std::string input;
   std::getline(std::cin, input);
   if(input == "exit 0"){break;}
@@ -159,7 +159,7 @@ while (true)
             std::cout << line; // Do not add extra newlines
         }
     }
-    std::cout << std::flush;
+    std::cout << std::endl;
 }
 
   else if(command == "cd"){
