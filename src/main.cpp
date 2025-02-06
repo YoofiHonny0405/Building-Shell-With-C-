@@ -199,12 +199,28 @@ while (true)
   }
 
   else if (command=="echo") {
-            
+      std::string output;      
       for(size_t i = 1; i < args.size(); i++){
-        std::cout << args[i];
-        if(i+1<args.size()) std::cout << " ";
+        std::string word = args[i];
+        std::string token;
+
+        bool escapeNext = false;
+        for(char c : word){
+          if(escapeNext){
+            token += c;
+            escapeNext = false;
+          }else if(c == '\\'){
+            escapeNext = true;
+          }else {
+            token += c; 
+          }
+        }
+        if(!output.empty()){
+          output += " ";
+        }
+        output += token;
       }
-      std::cout << std::endl;
+      std::cout << output << std::endl;
 
   } else {
       pid_t pid = fork();
