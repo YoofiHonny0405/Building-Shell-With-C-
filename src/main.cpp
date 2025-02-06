@@ -67,21 +67,13 @@ std::string findExecutable(const std::string& command) {
     std::vector<std::string> paths = split(std::string(pathEnv));
     for (const std::string& dir : paths) {
         fs::path filePath = fs::path(dir) / command;
-
-        // Use realpath to resolve symlinks if necessary
-        char resolvedPath[PATH_MAX];
-        if (realpath(filePath.c_str(), resolvedPath)) {
-            fs::path realFilePath(resolvedPath);
-
-            if (fs::exists(realFilePath) && fs::is_regular_file(realFilePath) &&
-                access(realFilePath.c_str(), X_OK) == 0) {
-                return realFilePath.string();  // Return the resolved path
-            }
+        if (fs::exists(filePath) && fs::is_regular_file(filePath) && access(filePath.c_str(), X_OK) == 0) {
+            return filePath.string();
         }
     }
-
-    return "";  // Executable not found
+    return "";
 }
+
 
 
 
@@ -110,27 +102,25 @@ while (true)
   std::string command = args[0];
   
 
-  if (command == "type"){
-       //std::string command = input.substr(5);
-      if(args.size() < 2){
+  if (command == "type") {
+    if (args.size() < 2) {
         std::cout << "type: missing argument" << std::endl;
         continue;
-      }
-      std::string targetCommand = args[1];
-      
-      if(builtins.count(targetCommand)){
-        std::cout << targetCommand << " is a shell builtin"<< std::endl;
-      }
-      else {
-       std::string execPath =findExecutable(targetCommand);
-       if(!execPath.empty()){
-          std::cout << targetCommand << " is " << execPath << std::endl;
-       }else{
-          std::cout << targetCommand << ": not found"<<std::endl;
-       }
     }
-  
-  } 
+    std::string targetCommand = args[1];
+    
+    if (builtins.count(targetCommand)) {
+        std::cout << targetCommand << " is a shell builtin" << std::endl;
+    } else {
+        std::string execPath = findExecutable(targetCommand);
+        if (!execPath.empty()) {
+            std::cout << targetCommand << " is " << execPath << std::endl;
+        } else {
+            std::cout << targetCommand << ": not found" << std::endl;
+        }
+    }
+}
+
 
   else if(command == "pwd"){
     char currentDir[PATH_MAX];
