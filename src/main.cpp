@@ -54,9 +54,13 @@ std::vector<std::string> split(const std::string& str/*,char delimiter*/){
       else token += c;
       
     }else if(c =='"' && !inQuotes){
-      if(inDoubleQuotes)inDoubleQuotes = false;
-      else{inDpubleQuotes = true;}
-      else token += c;
+      if(!inQuotes){
+        if(inDoubleQuotes){
+          inDoubleQuotes = false;
+        }else{
+        inDoubleQuotes = true;
+      }
+      }else token += c;
     }else if(c == ' ' && !inQuotes && !inDoubleQuotes){
         if(!token.empty()){
           tokens.push_back(token);
