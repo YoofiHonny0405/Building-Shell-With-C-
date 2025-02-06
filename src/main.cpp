@@ -28,7 +28,9 @@ std::vector<std::string> split(const std::string& str) {
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
         if (c == '\\' && i + 1 < str.size()) {
-            token += str[++i];  // Add the next character literally
+            // Preserve backslash and next character
+            token += c;
+            token += str[++i];
         } else if (c == '\'' || c == '"') {
             if (inQuotes && c == quoteChar) {
                 inQuotes = false;
@@ -55,6 +57,7 @@ std::vector<std::string> split(const std::string& str) {
 
     return tokens;
 }
+
 
 
 std::string findExecutable(const std::string& command){
@@ -135,25 +138,16 @@ while (true)
 
     for (size_t i = 1; i < args.size(); ++i) {
         std::string filePath = args[i];
-        
+
         // Remove surrounding quotes if present
-        if (filePath.size() >= 2 && 
-            ((filePath.front() == '"' && filePath.back() == '"') || 
+        if (filePath.size() >= 2 &&
+            ((filePath.front() == '"' && filePath.back() == '"') ||
              (filePath.front() == '\'' && filePath.back() == '\''))) {
             filePath = filePath.substr(1, filePath.size() - 2);
         }
 
-        // Unescape the filename
-        std::string unescapedPath;
-        for (size_t j = 0; j < filePath.size(); ++j) {
-            if (filePath[j] == '\\' && j + 1 < filePath.size()) {
-                unescapedPath += filePath[++j];
-            } else {
-                unescapedPath += filePath[j];
-            }
-        }
-
-        std::ifstream file(unescapedPath);
+        // Open and read the file
+        std::ifstream file(filePath);
         if (!file) {
             std::cerr << "cat: " << filePath << ": No such file or directory" << std::endl;
             continue;
@@ -161,10 +155,11 @@ while (true)
 
         std::string line;
         while (std::getline(file, line)) {
-            std::cout << line << std::endl;
+            std::cout << line; // Do not add extra newlines
         }
     }
 }
+
   else if(command == "cd"){
     if(args.size() < 2){
       std::cerr << "cd: missing argument" << std::endl;
