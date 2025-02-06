@@ -28,7 +28,13 @@ std::vector<std::string> split(const std::string& str,char delimiter){
    for(size_t i =0; i< str.size(); i++){
     char c = str[i];
     if(escapeNext){
-      token +=c ;
+      switch(c){
+          case 'n': token +='\n'; break;
+          case 't': token +='\t'; break;
+          case '\'': token +='\''; break;
+          case '\"': token +='\"'; break;
+          default:token +=c ;
+      }
       escapeNext = false;
     }else if(c == '\\'){
       escapeNext = true;
