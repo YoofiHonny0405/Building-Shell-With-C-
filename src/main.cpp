@@ -152,7 +152,7 @@ while (true)
     for(size_t i = 1; i < args.size(); i++){
       std::string filePath = args[i];
 
-      if((filePath.front() == '"' && filePath.back() == '"') || (filePath.front() == '\'' && filePath.back() == '\'')){
+      if(!filePath.empty() && ((filePath.front() == '"' && filePath.back() == '"') || (filePath.front() == '\'' && filePath.back() == '\''))){
           filePath = filePath.substr(1, filePath.size() - 2);
       }
 
