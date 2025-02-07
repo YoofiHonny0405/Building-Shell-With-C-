@@ -186,19 +186,28 @@ while (true)
     std::string output;
     for (size_t i = 1; i < args.size(); i++) {
         if (i > 1) output += " ";
+
         std::string arg = args[i];
-        
-        // Handle escaped spaces
-        size_t pos = 0;
-        while ((pos = arg.find("\\ ", pos)) != std::string::npos) {
-            arg.replace(pos, 2, " ");
-            pos += 1;
+
+        // Handle removal of outermost single or double quotes
+        if (arg.size() >= 2 &&
+            ((arg.front() == '\'' && arg.back() == '\'') ||
+             (arg.front() == '"' && arg.back() == '"'))) {
+            arg = arg.substr(1, arg.size() - 2);
         }
-        
+
+        // Handle escaped characters like \' or \"
+        size_t pos = 0;
+        while ((pos = arg.find("\\", pos)) != std::string::npos) {
+            arg.erase(pos, 1); // Remove the backslash
+            pos++;
+        }
+
         output += arg;
     }
     std::cout << output << std::endl;
 }
+
 
 
  else {
