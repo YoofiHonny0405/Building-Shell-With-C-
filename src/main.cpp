@@ -157,25 +157,26 @@ int main() {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
         } else if (command == "echo") {
-            std::string output;
-            for (size_t i = 1; i < args.size(); i++) {
-                if (i > 1) output += " ";
-                std::string arg = args[i];
+    std::string output;
+    for (size_t i = 1; i < args.size(); i++) {
+        if (i > 1) output += " ";
+        std::string arg = args[i];
 
-                // Handle escaped spaces and backslashes
-                size_t pos = 0;
-                while (pos < arg.size()) {
-                    if (arg[pos] == '\\' && pos + 1 < arg.size()) {
-                        output += arg[pos];
-                        output += arg[pos + 1];
-                        pos += 2;
-                    } else {
-                        output += arg[pos++];
-                    }
-                }
+        // Handle escaped spaces (`\ ` -> ` `)
+        size_t pos = 0;
+        while ((pos = arg.find("\\", pos)) != std::string::npos) {
+            if (pos + 1 < arg.size() && arg[pos + 1] == ' ') {
+                arg.replace(pos, 2, " ");
+            } else {
+                ++pos;
             }
-            std::cout << output << std::endl;
-        } else {
+        }
+        
+        output += arg;
+    }
+    std::cout << output << std::endl;
+}
+ else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
