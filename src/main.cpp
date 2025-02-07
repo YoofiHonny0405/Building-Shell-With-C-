@@ -189,10 +189,18 @@ while (true)
   else if (command == "echo") {
     std::string output;
     for (size_t i = 1; i < args.size(); i++) {
-        if (i > 1) std::cout << " ";
-        std::cout << args[i];
+        if (i > 1) outpu += " ";
+        std::string arg =args[i];
+        
+        if (arg.size() >= 2 && 
+            ((arg.front() == '"' && arg.back() == '"') || 
+             (arg.front() == '\'' && arg.back() == '\''))) {
+            arg = arg.substr(1, arg.size() - 2);
+        }
+        
+        output += arg;
     }
-    std::cout << std::endl;
+    std::cout << output << std::endl;
 }
 
  else {
