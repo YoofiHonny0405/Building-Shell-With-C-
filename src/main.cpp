@@ -184,29 +184,22 @@ while (true)
 
   else if (command == "echo") {
     std::string output;
-    for (size_t i = 1; i < args.size(); i++) {
+    for (size_t i = 1; i < args.size(); i)++ {
         if (i > 1) output += " ";
         std::string arg = args[i];
-        if(!arg.empty() && (arg.front() == '\''||arg.front() == '"') &&
-          arg.front() == arg.back()){
-            arg = arg.substr(1,arg.size() - 2);
-          }
-          output += arg;
-          if(i +1 < args.size()) output += " ";
-        // Handle escaped characters
-        /*std::string processed;
-        for (size_t j = 0; j < arg.length(); ++j) {
-            if (arg[j] == '\\' && j + 1 < arg.length()) {
-                processed += arg[++j];
-            } else {
-                processed += arg[j];
-            }
+        
+        // Handle escaped spaces
+        size_t pos = 0;
+        while ((pos = arg.find("\\ ", pos)) != std::string::npos) {
+            arg.replace(pos, 2, " ");
+            pos += 1;
         }
         
-        output += processed;*/
+        output += arg;
     }
     std::cout << output << std::endl;
 }
+
 
  else {
       pid_t pid = fork();
