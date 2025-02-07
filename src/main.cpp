@@ -191,17 +191,19 @@ while (true)
         if (i > 1) output += " ";
         std::string arg = args[i];
         
-        // Handle escaped characters
+        // Remove surrounding quotes if present
+        if (arg.size() >= 2 && 
+            ((arg.front() == '"' && arg.back() == '"') || 
+             (arg.front() == '\'' && arg.back() == '\''))) {
+            arg = arg.substr(1, arg.size() - 2);
+        }
+        
+        // Preserve escaped characters
         std::string processed;
         for (size_t j = 0; j < arg.length(); ++j) {
             if (arg[j] == '\\' && j + 1 < arg.length()) {
-                char next = arg[j + 1];
-                if (next == '\'' || next == '"' || next == '\\') {
-                    processed += next;
-                    ++j;
-                } else {
-                    processed += arg[j];
-                }
+                processed += arg[j];
+                processed += arg[++j];
             } else {
                 processed += arg[j];
             }
@@ -211,7 +213,6 @@ while (true)
     }
     std::cout << output << std::endl;
 }
-
 
 
  else {
