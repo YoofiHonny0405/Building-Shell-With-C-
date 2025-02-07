@@ -184,7 +184,7 @@ while (true)
 
   else if (command == "echo") {
     std::string output;
-    for (size_t i = 1; i < args.size(); i)++ {
+    for (size_t i = 1; i < args.size(); i++) {
         if (i > 1) output += " ";
         std::string arg = args[i];
         
