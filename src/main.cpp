@@ -188,21 +188,17 @@ while (true)
         if (i > 1) output += " ";
         std::string arg = args[i];
         
-        // Handle escaped characters
-        std::string processed;
-        for (size_t j = 0; j < arg.length(); j++) {
-            if (arg[j] == '\\' && j + 1 < arg.length()) {
-                processed += arg[++j];
-            } else {
-                processed += arg[j];
-            }
+        // Handle escaped spaces
+        size_t pos = 0;
+        while ((pos = arg.find("\\ ", pos)) != std::string::npos) {
+            arg.replace(pos, 2, " ");
+            pos += 1;
         }
         
-        output += processed;
+        output += arg;
     }
     std::cout << output << std::endl;
 }
-
 
 
  else {
