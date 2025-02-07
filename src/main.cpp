@@ -191,24 +191,27 @@ while (true)
         if (i > 1) output += " ";
         std::string arg = args[i];
         
-        // Remove surrounding quotes if present
-        if (arg.size() >= 2 && 
-            ((arg.front() == '"' && arg.back() == '"') || 
-             (arg.front() == '\'' && arg.back() == '\''))) {
-            arg = arg.substr(1, arg.size() - 2);
+        // Handle escaped characters
+        std::string processed;
+        for (size_t j = 0; j < arg.length(); ++j) {
+            if (arg[j] == '\\' && j + 1 < arg.length()) {
+                char next = arg[j + 1];
+                if (next == '\'' || next == '"' || next == '\\') {
+                    processed += next;
+                    ++j;
+                } else {
+                    processed += arg[j];
+                }
+            } else {
+                processed += arg[j];
+            }
         }
         
-        // Handle escaped spaces
-        size_t pos = 0;
-        while ((pos = arg.find("\\ ", pos)) != std::string::npos) {
-            arg.replace(pos, 2, " ");
-            pos += 1;
-        }
-        
-        output += arg;
+        output += processed;
     }
     std::cout << output << std::endl;
 }
+
 
 
  else {
