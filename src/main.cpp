@@ -191,19 +191,34 @@ while (true)
         if (i > 1) output += " ";
         std::string arg = args[i];
         
-        // Handle escaped spaces
-        size_t pos = 0;
-        while ((pos = arg.find("\\ ", pos)) != std::string::npos) {
-            arg.replace(pos, 2, " ");
-            pos += 1;
+        // Remove surrounding quotes if present
+        if (arg.size() >= 2 && 
+            ((arg.front() == '"' && arg.back() == '"') || 
+             (arg.front() == '\'' && arg.back() == '\''))) {
+            arg = arg.substr(1, arg.size() - 2);
         }
         
-        output += arg;
+        // Handle escaped characters and spaces
+        std::string processed;
+        for (size_t j = 0; j < arg.length(); ++j) {
+            if (arg[j] == '\\' && j + 1 < arg.length()) {
+                char next = arg[j + 1];
+                if (next == ' ') {
+                    processed += ' ';
+                    ++j;
+                } else {
+                    processed += arg[j];
+                    processed += arg[++j];
+                }
+            } else {
+                processed += arg[j];
+            }
+        }
+        
+        output += processed;
     }
     std::cout << output << std::endl;
 }
-
-
 
  else {
       pid_t pid = fork();
