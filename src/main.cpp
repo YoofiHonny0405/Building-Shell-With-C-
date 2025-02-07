@@ -162,21 +162,46 @@ int main() {
         if (i > 1) output += " ";
         std::string arg = args[i];
 
-        // Handle escaped spaces (`\ ` -> ` `)
         size_t pos = 0;
-        while ((pos = arg.find("\\", pos)) != std::string::npos) {
-            if (pos + 1 < arg.size() && arg[pos + 1] == ' ') {
-                arg.replace(pos, 2, " ");
+        while (pos < arg.size()) {
+            if (arg[pos] == '\\' && pos + 1 < arg.size()) {
+                char nextChar = arg[pos + 1];
+                switch (nextChar) {
+                    case 'n':  // Handle \n newline
+                        output += '\n';
+                        pos += 2;
+                        break;
+                    case 't':  // Handle \t tab
+                        output += '\t';
+                        pos += 2;
+                        break;
+                    case '\\':  // Handle literal backslash
+                        output += '\\';
+                        pos += 2;
+                        break;
+                    case '"':  // Handle escaped double quote
+                        output += '"';
+                        pos += 2;
+                        break;
+                    case '\' ':  // Handle escaped space
+                        output += ' ';
+                        pos += 2;
+                        break;
+                    default:  // Preserve unknown escape sequences
+                        output += '\\';
+                        output += nextChar;
+                        pos += 2;
+                        break;
+                }
             } else {
-                ++pos;
+                output += arg[pos];
+                pos++;
             }
         }
-        
-        output += arg;
     }
     std::cout << output << std::endl;
 }
- else {
+
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
