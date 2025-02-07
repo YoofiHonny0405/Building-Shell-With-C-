@@ -139,23 +139,6 @@ int main() {
                 }
             }
             std::cout << std::endl;
-        } else if (command == "cd") {
-            if (args.size() < 2) {
-                std::cerr << "cd: missing argument" << std::endl;
-                continue;
-            }
-            std::string targetDir = args[1];
-            if (targetDir == "~") {
-                const char* homeDir = std::getenv("HOME");
-                if (!homeDir) {
-                    std::cerr << "cd: HOME not set" << std::endl;
-                    continue;
-                }
-                targetDir = homeDir;
-            }
-            if (chdir(targetDir.c_str()) != 0) {
-                std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
-            }
         } else if (command == "echo") {
     std::string output;
     for (size_t i = 1; i < args.size(); i++) {
@@ -202,6 +185,7 @@ int main() {
     std::cout << output << std::endl;
 }
 
+ else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
