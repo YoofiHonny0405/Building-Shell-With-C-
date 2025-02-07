@@ -176,18 +176,26 @@ int main() {
                 std::string arg = args[i];
 
                 // Handle escaped characters
-                size_t pos = 0;
-                while ((pos = arg.find("\\n", pos)) != std::string::npos) {
-                    arg.replace(pos, 2, "\n");
-                    pos += 1;
-                }
-                pos = 0;
-                while ((pos = arg.find("\\", pos)) != std::string::npos) {
-                    arg.replace(pos, 1, "\\");
-                    pos += 1;
+                std::string processed;
+                bool escape = false;
+
+                for (size_t j = 0; j < arg.length(); ++j) {
+                    if (escape) {
+                        // If we're in escape mode, check the next character
+                        if (arg[j] == 'n') {
+                            processed += '\n'; // Handle \n
+                        } else {
+                            processed += arg[j]; // Handle other escape sequences
+                        }
+                        escape = false;
+                    } else if (arg[j] == '\\') {
+                        escape = true; // Escape mode is on for the next character
+                    } else {
+                        processed += arg[j]; // Add regular characters
+                    }
                 }
 
-                output += arg;
+                output += processed;
             }
             std::cout << output << std::endl;
         } else {
