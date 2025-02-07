@@ -196,19 +196,19 @@ while (true)
             arg = arg.substr(1, arg.size() - 2);
         }
 
-        // Handle escaped characters like \' or \"
+        // Preserve backslashes before special characters (\") but remove others
         size_t pos = 0;
-        while ((pos = arg.find("\\", pos)) != std::string::npos) {
-            arg.erase(pos, 1); // Remove the backslash
-            pos++;
+        while (pos < arg.size()) {
+            if (arg[pos] == '\\' && pos + 1 < arg.size() &&
+                (arg[pos + 1] == '"' || arg[pos + 1] == '\'' || arg[pos + 1] == '\\')) {
+                output += arg[pos]; // Keep the backslash
+                pos++;
+            }
+            output += arg[pos++];
         }
-
-        output += arg;
     }
     std::cout << output << std::endl;
 }
-
-
 
  else {
       pid_t pid = fork();
