@@ -26,10 +26,22 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
         if (c == '\\' && i + 1 < str.size()) {
-            // Preserve backslash and next character
-            token += c;
-            token += str[++i];
-        } else if (c == '\'' || c == '"') {
+            // Preserve backslash and handle escape sequences
+            char nextChar = str[i + 1];
+            if (nextChar == 'n') {
+                token += '\n';
+                ++i;
+            } else if (nextChar == ' ') {
+                token += ' ';
+                ++i;
+            } else if (nextChar == '\\') {
+                token += '\\';
+                ++i;
+            } else {
+                token += nextChar;
+                ++i;
+            }
+        } else if (c == '\'' || c == '\"') {
             if (inQuotes && c == quoteChar) {
                 inQuotes = false;
                 quoteChar = '\0';
@@ -72,7 +84,6 @@ std::string findExecutable(const std::string& command) {
 }
 
 int main() {
-    // Flush after every std::cout / std:cerr
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
@@ -82,7 +93,7 @@ int main() {
         std::cout << "$ ";
         std::string input;
         std::getline(std::cin, input);
-        if (input == "exit 0") break;
+        if (input == "exit 0") { break; }
 
         std::vector<std::string> args = split(input, ' ');
         if (args.empty()) continue;
@@ -95,6 +106,7 @@ int main() {
                 continue;
             }
             std::string targetCommand = args[1];
+
             if (builtins.count(targetCommand)) {
                 std::cout << targetCommand << " is a shell builtin" << std::endl;
             } else {
@@ -117,12 +129,13 @@ int main() {
                 std::cerr << "cat: missing file operand" << std::endl;
                 continue;
             }
+
             for (size_t i = 1; i < args.size(); ++i) {
                 std::string filePath = args[i];
 
-                // Handle paths with backslashes or quotes
+                // Remove surrounding quotes if present
                 if (filePath.size() >= 2 &&
-                    ((filePath.front() == '"' && filePath.back() == '"') ||
+                    ((filePath.front() == '\"' && filePath.back() == '\"') ||
                      (filePath.front() == '\'' && filePath.back() == '\''))) {
                     filePath = filePath.substr(1, filePath.size() - 2);
                 }
@@ -139,53 +152,45 @@ int main() {
                 }
             }
             std::cout << std::endl;
-        } else if (command == "echo") {
-    std::string output;
-    for (size_t i = 1; i < args.size(); i++) {
-        if (i > 1) output += " ";
-        std::string arg = args[i];
-
-        size_t pos = 0;
-        while (pos < arg.size()) {
-            if (arg[pos] == '\\' && pos + 1 < arg.size()) {
-                char nextChar = arg[pos + 1];
-                switch (nextChar) {
-                    case 'n':  // Handle \n newline
-                        output += '\n';
-                        pos += 2;
-                        break;
-                    case 't':  // Handle \t tab
-                        output += '\t';
-                        pos += 2;
-                        break;
-                    case '\\':  // Handle literal backslash
-                        output += '\\';
-                        pos += 2;
-                        break;
-                    case '"':  // Handle escaped double quote
-                        output += '"';
-                        pos += 2;
-                        break;
-                    case '\' ':  // Handle escaped space
-                        output += ' ';
-                        pos += 2;
-                        break;
-                    default:  // Preserve unknown escape sequences
-                        output += '\\';
-                        output += nextChar;
-                        pos += 2;
-                        break;
-                }
-            } else {
-                output += arg[pos];
-                pos++;
+        } else if (command == "cd") {
+            if (args.size() < 2) {
+                std::cerr << "cd: missing argument" << std::endl;
+                continue;
             }
-        }
-    }
-    std::cout << output << std::endl;
-}
+            std::string targetDir = args[1];
+            if (targetDir == "~") {
+                const char* homeDir = std::getenv("HOME");
+                if (!homeDir) {
+                    std::cerr << "cd: HOME not set" << std::endl;
+                    continue;
+                }
+                targetDir = homeDir;
+            }
+            if (chdir(targetDir.c_str()) != 0) {
+                std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
+            }
+        } else if (command == "echo") {
+            std::string output;
+            for (size_t i = 1; i < args.size(); ++i) {
+                if (i > 1) output += " ";
+                std::string arg = args[i];
 
- else {
+                // Handle escaped characters
+                size_t pos = 0;
+                while ((pos = arg.find("\\n", pos)) != std::string::npos) {
+                    arg.replace(pos, 2, "\n");
+                    pos += 1;
+                }
+                pos = 0;
+                while ((pos = arg.find("\\", pos)) != std::string::npos) {
+                    arg.replace(pos, 1, "\\");
+                    pos += 1;
+                }
+
+                output += arg;
+            }
+            std::cout << output << std::endl;
+        } else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
