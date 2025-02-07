@@ -24,13 +24,17 @@ std::vector<std::string> split(const std::string& str,char delimiter) {
     std::string token;
     bool inQuotes = false;
     char quoteChar = '\0';
+    bool escapeNext = false;
 
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
-        if (c == '\\' && i + 1 < str.size()) {
-            // Preserve backslash and next character
+
+        if (escapeNext) {
             token += c;
-            token += str[++i];
+            escapeNext = false;
+        } else if (c == '\\') {
+            escapeNext = true;
+            token += c;
         } else if (c == '\'' || c == '"') {
             if (inQuotes && c == quoteChar) {
                 inQuotes = false;
@@ -38,9 +42,8 @@ std::vector<std::string> split(const std::string& str,char delimiter) {
             } else if (!inQuotes) {
                 inQuotes = true;
                 quoteChar = c;
-            } else {
-                token += c;
             }
+            token += c;
         } else if (c == ' ' && !inQuotes) {
             if (!token.empty()) {
                 tokens.push_back(token);
@@ -56,6 +59,7 @@ std::vector<std::string> split(const std::string& str,char delimiter) {
     }
 
     return tokens;
+
 }
 
 
@@ -185,29 +189,10 @@ while (true)
   else if (command == "echo") {
     std::string output;
     for (size_t i = 1; i < args.size(); i++) {
-        if (i > 1) output += " ";
-
-        std::string arg = args[i];
-
-        // Handle removal of outermost single or double quotes
-        if (arg.size() >= 2 &&
-            ((arg.front() == '\'' && arg.back() == '\'') ||
-             (arg.front() == '"' && arg.back() == '"'))) {
-            arg = arg.substr(1, arg.size() - 2);
-        }
-
-        // Preserve backslashes before special characters (\") but remove others
-        size_t pos = 0;
-        while (pos < arg.size()) {
-            if (arg[pos] == '\\' && pos + 1 < arg.size() &&
-                (arg[pos + 1] == '"' || arg[pos + 1] == '\'' || arg[pos + 1] == '\\')) {
-                output += arg[pos]; // Keep the backslash
-                pos++;
-            }
-            output += arg[pos++];
-        }
+        if (i > 1) std::cout << " ";
+        std::cout << args[i];
     }
-    std::cout << output << std::endl;
+    std::cout << std::endl;
 }
 
  else {
