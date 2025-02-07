@@ -184,12 +184,17 @@ while (true)
 
   else if (command == "echo") {
     std::string output;
-    for (size_t i = 1; i < args.size(); ++i) {
+    for (size_t i = 1; i < args.size(); i++) {
         if (i > 1) output += " ";
         std::string arg = args[i];
-        
+        if(!arg.empty() && (arg.front() == '\''||arg.front() == '"') &&
+          arg.front() == arg.back()){
+            arg = arg.substr(1,arg.size() - 2);
+          }
+          output += arg;
+          if(i +1 < args.size()) output += " ";
         // Handle escaped characters
-        std::string processed;
+        /*std::string processed;
         for (size_t j = 0; j < arg.length(); ++j) {
             if (arg[j] == '\\' && j + 1 < arg.length()) {
                 processed += arg[++j];
@@ -198,7 +203,7 @@ while (true)
             }
         }
         
-        output += processed;
+        output += processed;*/
     }
     std::cout << output << std::endl;
 }
