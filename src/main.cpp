@@ -174,35 +174,37 @@ int main() {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
         } else if (command == "echo") {
-            std::string output;
-            for (size_t i = 1; i < args.size(); ++i) {
-                if (i > 1) output += " ";
-                std::string arg = args[i];
+    std::string output;
+    for (size_t i = 1; i < args.size(); ++i) {
+        if (i > 1) output += " ";
+        std::string arg = args[i];
 
-                // Process escape sequences
-                std::string processed;
-                bool escape = false;
+        // Process escape sequences
+        std::string processed;
+        bool escape = false;
 
-                for (size_t j = 0; j < arg.length(); ++j) {
-                    if (escape) {
-                        if (arg[j] == 'n') {
-                            processed += '\\';  // Add a literal backslash
-                            processed += 'n';   // Add the character 'n'
-                        } else {
-                            processed += arg[j]; // Add non-\n characters
-                        }
-                        escape = false;
-                    } else if (arg[j] == '\\') {
-                        escape = true;  // Set escape mode for next character
-                    } else {
-                        processed += arg[j]; // Add regular characters
-                    }
+        for (size_t j = 0; j < arg.length(); ++j) {
+            if (escape) {
+                if (arg[j] == 'n') {
+                    processed += '\n'; // Add new line for \n
+                } else if (arg[j] == '\"') {
+                    processed += '\"'; // Preserve escaped quote
+                } else {
+                    processed += arg[j]; // Preserve any other escaped characters
                 }
-
-                output += processed;
+                escape = false;
+            } else if (arg[j] == '\\') {
+                escape = true;  // Set escape mode for next character
+            } else {
+                processed += arg[j]; // Add regular characters
             }
-            std::cout << output << std::endl;
-        } else {
+        }
+
+        output += processed;
+    }
+    std::cout << output << std::endl;
+}
+ else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
