@@ -200,11 +200,11 @@ int main() {
             }
         }
 
+        // Append the processed argument to the output
         output += processed;
     }
     std::cout << output << std::endl;
-}
- else {
+} else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
