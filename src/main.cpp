@@ -28,7 +28,6 @@ std::vector<std::string> split(const std::string& str,char delimiter) {
 
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
-
         if (escapeNext) {
             token += c;
             escapeNext = false;
@@ -188,20 +187,29 @@ while (true)
 
   else if (command == "echo") {
     std::string output;
-    for (size_t i = 1; i < args.size(); i++) {
+    for (size_t i = 1; i < args.size(); ++i) {
         if (i > 1) output += " ";
-        std::string arg =args[i];
+        std::string arg = args[i];
         
+        // Remove surrounding quotes if present
         if (arg.size() >= 2 && 
             ((arg.front() == '"' && arg.back() == '"') || 
              (arg.front() == '\'' && arg.back() == '\''))) {
             arg = arg.substr(1, arg.size() - 2);
         }
         
+        // Handle escaped spaces
+        size_t pos = 0;
+        while ((pos = arg.find("\\ ", pos)) != std::string::npos) {
+            arg.replace(pos, 2, " ");
+            pos += 1;
+        }
+        
         output += arg;
     }
     std::cout << output << std::endl;
 }
+
 
  else {
       pid_t pid = fork();
