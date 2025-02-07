@@ -41,7 +41,7 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
                 token += nextChar;
                 i++;
             }
-        } else if (c == '\'' || c == '\"') {
+        } else if (c == '\'' || c == '"') {
             if (inQuotes && c == quoteChar) {
                 inQuotes = false;
                 quoteChar = '\0';
@@ -134,7 +134,7 @@ int main() {
                 std::string filePath = args[i];
 
                 if (filePath.size() >= 2 &&
-                    ((filePath.front() == '\"' && filePath.back() == '\"') ||
+                    ((filePath.front() == '"' && filePath.back() == '"') ||
                      (filePath.front() == '\'' && filePath.back() == '\''))) {
                     filePath = filePath.substr(1, filePath.size() - 2);
                 }
@@ -174,12 +174,11 @@ int main() {
                 if (i > 1) output += " ";
                 std::string arg = args[i];
 
-                size_t pos = 0;
-                while ((pos = arg.find("\\n", pos)) != std::string::npos) {
-                    output += "\\n";
-                    pos += 2;
+                if ((arg.front() == '\'' && arg.back() == '\'') || (arg.front() == '"' && arg.back() == '"')) {
+                    output += arg.substr(1, arg.size() - 2);
+                } else {
+                    output += arg;
                 }
-                output += arg;
             }
             std::cout << output << std::endl;
         } else {
