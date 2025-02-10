@@ -195,10 +195,15 @@ int main() {
             } else if (arg[j] == '\\' && j + 1 < arg.length()) {
                 // Outside single quotes, handle escaped characters
                 char next = arg[j + 1];
-                if (next == 'n') {
+                if (next == '\'' || next == '"') {
+                    // For escaped quotes, only add the quote
+                    processed += next;
+                    ++j;
+                } else if (next == 'n') {
                     processed += "\\n";
                     ++j;
                 } else {
+                    // For other escaped characters, keep the backslash
                     processed += arg[j];
                     processed += next;
                     ++j;
