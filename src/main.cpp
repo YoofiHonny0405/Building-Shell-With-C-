@@ -165,8 +165,8 @@ int main() {
                 } else {
                     size_t pos = 0;
                     while ((pos = arg.find("\\n", pos)) != std::string::npos) {
-                        arg.replace(pos, 2, "\n");
-                        pos += 1;
+                        arg.replace(pos, 2, "\\n");
+                        pos += 2;
                     }
                     for (size_t j = 0; j < arg.size(); ++j) {
                         if (arg[j] == '\\' && j + 1 < arg.size() &&
