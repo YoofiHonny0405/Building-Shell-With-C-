@@ -189,17 +189,24 @@ int main() {
                     processed += '\\';
                     processed += next;
                 } else {
-                    // Outside quotes, remove the backslash and add only the next character
-                    processed += next;
+                    // Outside quotes, remove the backslash only if it escapes quotes
+                    if (next == '\'' || next == '"') {
+                        processed += next;
+                    } else if (next == ' ') {
+                        processed += ' '; // Handle escaped spaces
+                    } else {
+                        processed += arg[j]; // Preserve the backslash
+                        processed += next;
+                    }
                 }
                 ++j; // Skip the next character
             } else if (arg[j] == '\'' && !inDoubleQuotes) {
-                // Toggle single-quote state
-                inSingleQuotes = !inSingleQuotes;
-                if (!inSingleQuotes) continue; // Skip closing single quote
+                inSingleQuotes = !inSingleQuotes; // Toggle single quotes
+                if (j == 0 || j == arg.length() - 1) continue; // Skip outermost quotes
+                processed += arg[j];
             } else if (arg[j] == '"' && !inSingleQuotes) {
-                // Toggle double-quote state
-                inDoubleQuotes = !inDoubleQuotes;
+                inDoubleQuotes = !inDoubleQuotes; // Toggle double quotes
+                processed += arg[j];
             } else {
                 processed += arg[j];
             }
