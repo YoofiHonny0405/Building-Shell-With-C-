@@ -126,46 +126,35 @@ int main() {
                 std::cerr << "Error getting current directory" << std::endl;
             }
         } else if (command == "cat") {
-            if (args.size() < 2) {
-                std::cerr << "cat: missing file operand" << std::endl;
-                continue;
-            }
+    if (args.size() < 2) {
+        std::cerr << "cat: missing file operand" << std::endl;
+        continue;
+    }
 
-            for (size_t i = 1; i < args.size(); ++i) {
-                std::string filePath = args[i];
+    for (size_t i = 1; i < args.size(); ++i) {
+        std::string filePath = args[i];
 
-                if (filePath.size() >= 2 &&
-                    ((filePath.front() == '\"' && filePath.back() == '\"') ||
-                     (filePath.front() == '\'' && filePath.back() == '\''))) {
-                    filePath = filePath.substr(1, filePath.size() - 2);
-                }
+        // Remove surrounding quotes if present
+        if (filePath.size() >= 2 &&
+            ((filePath.front() == '"' && filePath.back() == '"') ||
+             (filePath.front() == '\'' && filePath.back() == '\''))) {
+            filePath = filePath.substr(1, filePath.size() - 2);
+        }
 
-                // Handle single quotes and backslashes in file names
-                std::string cleanedPath;
-                for (size_t j = 0; j < filePath.size(); ++j) {
-                    if (filePath[j] == '\\' && j + 1 < filePath.size()) {
-                        cleanedPath += filePath[++j];
-                    } else {
-                        cleanedPath += filePath[j];
-                    }
-                }
+        // Open and read the file
+        std::ifstream file(filePath);
+        if (!file) {
+            std::cerr << "cat: " << args[i] << ": No such file or directory" << std::endl;
+            continue;
+        }
 
-                // Remove any remaining single quotes within filenames
-                cleanedPath.erase(std::remove(cleanedPath.begin(), cleanedPath.end(), '\''), cleanedPath.end());
-
-                std::ifstream file(cleanedPath);
-                if (!file) {
-                    std::cerr << "cat: " << cleanedPath << ": No such file or directory" << std::endl;
-                    continue;
-                }
-
-                std::string line;
-                while (std::getline(file, line)) {
-                    std::cout << line;
-                }
-            }
-            std::cout << std::endl;
-        } else if (command == "cd") {
+        std::string line;
+        while (std::getline(file, line)) {
+            std::cout << line;
+        }
+    }
+    std::cout << s
+    }else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
                 continue;
