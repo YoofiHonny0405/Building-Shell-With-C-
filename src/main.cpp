@@ -27,7 +27,7 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
         char c = str[i];
         if (c == '\\' && i + 1 < str.size()) {
             token += str[++i];
-        } else if (c == '\'' || c == '"') {
+        } else if (c == '\'' || c == '\"') {
             if (inQuotes && c == quoteChar) {
                 inQuotes = false;
                 quoteChar = '\0';
@@ -120,7 +120,7 @@ int main() {
                 std::string filePath = args[i];
 
                 if (filePath.size() >= 2 &&
-                    ((filePath.front() == '"' && filePath.back() == '"') ||
+                    ((filePath.front() == '\"' && filePath.back() == '\"') ||
                      (filePath.front() == '\'' && filePath.back() == '\''))) {
                     filePath = filePath.substr(1, filePath.size() - 2);
                 }
@@ -153,26 +153,22 @@ int main() {
             if (chdir(targetDir.c_str()) != 0) {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
-        } else if (command == "echo") {
+        }else if (command == "echo") {
             std::string output;
-
-            for (size_t i = 1; i < args.size(); ++i) {
+            for (size_t i = 1; i < args.size(); i++) {
                 if (i > 1) output += " ";
                 std::string arg = args[i];
-
+        
+                // Handle literal backslashes (`\\`)
                 size_t pos = 0;
-                while ((pos = arg.find("\\n", pos)) != std::string::npos) {
-                    arg.replace(pos, 2, "\n");
-                    pos += 1;
+                while ((pos = arg.find("\\\\", pos)) != std::string::npos) {
+                    arg.replace(pos, 2, "\\");
                 }
-                while ((pos = arg.find("\\\"", pos)) != std::string::npos) {
-                    arg.replace(pos, 2, "\"");
-                    pos += 1;
-                }
+        
                 output += arg;
             }
             std::cout << output << std::endl;
-        } else {
+        }else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
