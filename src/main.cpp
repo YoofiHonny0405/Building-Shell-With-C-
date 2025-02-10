@@ -180,21 +180,26 @@ int main() {
 
         std::string processed;
         bool inSingleQuotes = false;
+        bool inDoubleQuotes = false;
 
         for (size_t j = 0; j < arg.length(); ++j) {
-            if (arg[j] == '\'') {
-                // Toggle single quote mode and skip the outermost single quotes
+            if (arg[j] == '\'' && !inDoubleQuotes) {
+                // Toggle single quote mode
                 inSingleQuotes = !inSingleQuotes;
-                continue;
+                continue;  // Skip the quote itself
             }
 
-            if (inSingleQuotes) {
-                // Inside single quotes, preserve everything as-is
-                processed += arg[j];
-            } else if (arg[j] == '\\' && j + 1 < arg.length()) {
+            if (arg[j] == '\"' && !inSingleQuotes) {
+                // Toggle double quote mode
+                inDoubleQuotes = !inDoubleQuotes;
+                continue;  // Skip the quote itself
+            }
+
+            if (arg[j] == '\\' && j + 1 < arg.length()) {
                 char next = arg[j + 1];
                 if (next == '\'' || next == '"' || next == '\\') {
                     // Preserve backslash for escaped quotes or backslashes
+                    processed += '\\';
                     processed += next;
                     ++j; // Skip the next character
                 } else if (next == 'n') {
@@ -216,7 +221,7 @@ int main() {
         output += processed;
     }
 
-    std::cout << '"' << output << '"' << std::endl;
+    std::cout << output << std::endl;
 }
  else {
             pid_t pid = fork();
