@@ -185,31 +185,21 @@ int main() {
             if (arg[j] == '\\' && j + 1 < arg.length()) {
                 char next = arg[j + 1];
                 if (inSingleQuotes || inDoubleQuotes) {
-                    // Inside quotes, preserve backslash for certain characters
-                    if (next == '\\' || next == '\'' || next == '"') {
-                        processed += '\\';
-                        processed += next;
-                    } else {
-                        processed += arg[j];
-                        processed += next;
-                    }
+                    // Inside quotes, preserve the backslash and the next character
+                    processed += '\\';
+                    processed += next;
                 } else {
-                    // Outside quotes, remove backslash for quotes
-                    if (next == '\'' || next == '"') {
-                        processed += next;
-                    } else {
-                        processed += arg[j];
-                        processed += next;
-                    }
+                    // Outside quotes, remove the backslash and add only the next character
+                    processed += next;
                 }
                 ++j; // Skip the next character
             } else if (arg[j] == '\'' && !inDoubleQuotes) {
+                // Toggle single-quote state
                 inSingleQuotes = !inSingleQuotes;
-                if (j == 0 || j == arg.length() - 1) continue; // Skip outermost quotes
-                processed += arg[j];
+                if (!inSingleQuotes) continue; // Skip closing single quote
             } else if (arg[j] == '"' && !inSingleQuotes) {
+                // Toggle double-quote state
                 inDoubleQuotes = !inDoubleQuotes;
-                processed += arg[j];
             } else {
                 processed += arg[j];
             }
