@@ -152,8 +152,8 @@ int main() {
                              std::istreambuf_iterator<char>());
         std::cout << content;
     }
-    std::cout << std::endl;  // Add a newline after all files have been processed
-    }
+    std::cout << std::flush;  // Flush the output without adding a newline
+}
     else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
