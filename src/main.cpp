@@ -184,22 +184,28 @@ int main() {
         for (size_t j = 0; j < arg.length(); ++j) {
             if (arg[j] == '\\' && j + 1 < arg.length()) {
                 char next = arg[j + 1];
-                if (!inSingleQuotes && !inDoubleQuotes) {
-                    if (next == '\'' || next == '"') {
+                if (inSingleQuotes || inDoubleQuotes) {
+                    // Inside quotes, preserve backslash for certain characters
+                    if (next == '\\' || next == '\'' || next == '"') {
+                        processed += '\\';
                         processed += next;
-                        ++j;
                     } else {
                         processed += arg[j];
+                        processed += next;
                     }
-                } else if (inDoubleQuotes && (next == '"' || next == '\\')) {
-                    processed += arg[j];
-                    processed += next;
-                    ++j;
                 } else {
-                    processed += arg[j];
+                    // Outside quotes, remove backslash for quotes
+                    if (next == '\'' || next == '"') {
+                        processed += next;
+                    } else {
+                        processed += arg[j];
+                        processed += next;
+                    }
                 }
+                ++j; // Skip the next character
             } else if (arg[j] == '\'' && !inDoubleQuotes) {
                 inSingleQuotes = !inSingleQuotes;
+                if (j == 0 || j == arg.length() - 1) continue; // Skip outermost quotes
                 processed += arg[j];
             } else if (arg[j] == '"' && !inSingleQuotes) {
                 inDoubleQuotes = !inDoubleQuotes;
