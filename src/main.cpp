@@ -153,8 +153,9 @@ int main() {
             std::cout << line;
         }
     }
-    std::cout << s
-    }else if (command == "cd") {
+    std::cout << std::flush;
+}
+    else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
                 continue;
