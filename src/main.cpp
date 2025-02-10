@@ -178,34 +178,38 @@ int main() {
         if (i > 1) output += " ";
         std::string arg = args[i];
 
-        // Check if the argument is wrapped in single quotes
-        bool wrappedInSingleQuotes = (arg.length() >= 2 && arg.front() == '\'' && arg.back() == '\'');
-
         std::string processed;
         bool inSingleQuotes = false;
 
         for (size_t j = 0; j < arg.length(); ++j) {
-            if (arg[j] == '\\' && j + 1 < arg.length()) {
+            if (arg[j] == '\'') {
+                // Toggle single quote mode and skip the outermost single quotes
+                inSingleQuotes = !inSingleQuotes;
+                continue;
+            }
+
+            if (inSingleQuotes) {
+                // Inside single quotes, preserve everything as-is
+                processed += arg[j];
+            } else if (arg[j] == '\\' && j + 1 < arg.length()) {
                 char next = arg[j + 1];
-                if (next == '\'' || next == '"') {
-                    // For escaped quotes, only add the quote
+                if (next == '\'' || next == '"' || next == '\\') {
+                    // Preserve backslash for escaped quotes or backslashes
+                    processed += '\\';
                     processed += next;
-                    ++j;
+                    ++j; // Skip the next character
                 } else if (next == 'n') {
+                    // Preserve \n as-is
                     processed += "\\n";
-                    ++j;
+                    ++j; // Skip the next character
                 } else {
-                    // For other escaped characters, keep the backslash
+                    // For other escaped characters, keep them as-is
                     processed += arg[j];
                     processed += next;
-                    ++j;
+                    ++j; // Skip the next character
                 }
-            } else if (arg[j] == '\'' && !wrappedInSingleQuotes) {
-                processed += arg[j];
-            } else if (arg[j] == '\'' && wrappedInSingleQuotes && (j == 0 || j == arg.length() - 1)) {
-                // Skip the outermost single quotes
-                continue;
             } else {
+                // Add all other characters as-is
                 processed += arg[j];
             }
         }
