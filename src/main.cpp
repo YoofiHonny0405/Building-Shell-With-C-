@@ -148,13 +148,12 @@ int main() {
             continue;
         }
 
-        std::string line;
-        while (std::getline(file, line)) {
-            std::cout << line;
-        }
+        std::string content((std::istreambuf_iterator<char>(file)),
+                             std::istreambuf_iterator<char>());
+        std::cout << content;
     }
-    std::cout << std::flush;
-}
+    std::cout << std::endl;  // Add a newline after all files have been processed
+    }
     else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
