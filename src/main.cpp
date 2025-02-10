@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <cerrno>
-#include <algorithm>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -27,21 +26,7 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
         if (c == '\\' && i + 1 < str.size()) {
-            char nextChar = str[i + 1];
-            if (nextChar == 'n') {
-                token += "\\n";
-                i++;
-            } else if (nextChar == ' ') {
-                token += ' ';
-                i++;
-            } else if (nextChar == '\\') {
-                token += '\\';
-                i++;
-            } else {
-                token += '\\';
-                token += nextChar;
-                i++;
-            }
+            token += str[++i];
         } else if (c == '\'' || c == '\"') {
             if (inQuotes && c == quoteChar) {
                 inQuotes = false;
@@ -126,35 +111,43 @@ int main() {
                 std::cerr << "Error getting current directory" << std::endl;
             }
         } else if (command == "cat") {
-    if (args.size() < 2) {
-        std::cerr << "cat: missing file operand" << std::endl;
-        continue;
-    }
+            if (args.size() < 2) {
+                std::cerr << "cat: missing file operand" << std::endl;
+                continue;
+            }
 
-    for (size_t i = 1; i < args.size(); ++i) {
-        std::string filePath = args[i];
+            for (size_t i = 1; i < args.size(); ++i) {
+                std::string filePath = args[i];
 
-        // Remove surrounding quotes if present
-        if (filePath.size() >= 2 &&
-            ((filePath.front() == '"' && filePath.back() == '"') ||
-             (filePath.front() == '\'' && filePath.back() == '\''))) {
-            filePath = filePath.substr(1, filePath.size() - 2);
-        }
+                if (filePath.size() >= 2 &&
+                    ((filePath.front() == '\"' && filePath.back() == '\"') ||
+                     (filePath.front() == '\'' && filePath.back() == '\''))) {
+                    filePath = filePath.substr(1, filePath.size() - 2);
+                }
 
-        // Open and read the file
-        std::ifstream file(filePath);
-        if (!file) {
-            std::cerr << "cat: " << args[i] << ": No such file or directory" << std::endl;
-            continue;
-        }
+                // Handle single quotes and backslashes in file names
+                std::string cleanedPath;
+                for (size_t j = 0; j < filePath.size(); ++j) {
+                    if (filePath[j] == '\\' && j + 1 < filePath.size()) {
+                        cleanedPath += filePath[++j];
+                    } else {
+                        cleanedPath += filePath[j];
+                    }
+                }
 
-        std::string content((std::istreambuf_iterator<char>(file)),
-                             std::istreambuf_iterator<char>());
-        std::cout << content;
-    }
-    std::cout << std::flush;  // Flush the output without adding a newline
-}
-    else if (command == "cd") {
+                std::ifstream file(cleanedPath);
+                if (!file) {
+                    std::cerr << "cat: " << cleanedPath << ": No such file or directory" << std::endl;
+                    continue;
+                }
+
+                std::string line;
+                while (std::getline(file, line)) {
+                    std::cout << line;
+                }
+            }
+            std::cout << std::endl;
+        } else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
                 continue;
@@ -172,46 +165,31 @@ int main() {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
         } else if (command == "echo") {
-    std::string output;
+            std::string output;
+            bool singleQuoted = false;
 
-    for (size_t i = 1; i < args.size(); ++i) {
-        if (i > 1) output += " "; // Add space between arguments
-        std::string arg = args[i];
+            for (size_t i = 1; i < args.size(); ++i) {
+                if (i > 1) output += " ";
+                std::string arg = args[i];
 
-        std::string processed;
-        bool hasOuterSingleQuotes = (arg.length() >= 2 && arg.front() == '\'' && arg.back() == '\'');
-
-        for (size_t j = 0; j < arg.length(); ++j) {
-            if (hasOuterSingleQuotes && (j == 0 || j == arg.length() - 1)) {
-                // Skip the outermost single quotes
-                continue;
-            }
-
-            if (arg[j] == '\\' && j + 1 < arg.length()) {
-                char next = arg[j + 1];
-                if (next == '"' || next == '\'' || next == '\\') {
-                    // Preserve backslash for escaped quotes or backslashes
-                    processed += '\\';
-                    processed += next;
-                    ++j; // Skip the next character
-                } else {
-                    // Handle other escaped characters literally
-                    processed += arg[j];
-                    processed += next;
-                    ++j; // Skip the next character
+                if (arg.size() >= 2 && arg.front() == '\'' && arg.back() == '\'') {
+                    singleQuoted = true;
+                    arg = arg.substr(1, arg.size() - 2);
                 }
-            } else {
-                // Add all other characters as-is
-                processed += arg[j];
+
+                if (singleQuoted) {
+                    output += arg;  // Literal handling for single quotes
+                } else {
+                    size_t pos = 0;
+                    while ((pos = arg.find("\\n", pos)) != std::string::npos) {
+                        arg.replace(pos, 2, "\n");
+                        pos += 2;
+                    }
+                    output += arg;
+                }
             }
-        }
-
-        output += processed;
-    }
-
-    std::cout << output << std::endl;
-}
- else {
+            std::cout << output << std::endl;
+        } else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
