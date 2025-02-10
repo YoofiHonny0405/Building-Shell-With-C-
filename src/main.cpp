@@ -159,19 +159,21 @@ int main() {
                 if (i > 1) output += " ";
                 std::string arg = args[i];
         
-                // Handle escape sequences for backslashes, newlines, and quotes
                 size_t pos = 0;
+        
+                // Handle literal backslashes first (`\\\\` to `\`)
                 while ((pos = arg.find("\\\\", pos)) != std::string::npos) {
                     arg.replace(pos, 2, "\\");
+                    pos += 1;
                 }
-                pos = 0;
-                while ((pos = arg.find("\\n", pos)) != std::string::npos) {
-                    arg.replace(pos, 2, "\n");
-                }
+        
+                // Handle escaped double quotes (`\"` to `"`)
                 pos = 0;
                 while ((pos = arg.find("\\\"", pos)) != std::string::npos) {
                     arg.replace(pos, 2, "\"");
                 }
+        
+                // Keep `\\n` intact as required (no replacement)
         
                 output += arg;
             }
