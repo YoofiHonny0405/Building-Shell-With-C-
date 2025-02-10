@@ -180,38 +180,30 @@ int main() {
 
         std::string processed;
         bool inSingleQuotes = false;
+        bool hasOuterQuotes = (arg.length() >= 2 && arg.front() == '\'' && arg.back() == '\'');
 
         for (size_t j = 0; j < arg.length(); ++j) {
-            if (arg[j] == '\'') {
-                // Toggle single quote mode and skip outermost single quotes
-                if (j == 0 || j == arg.length() - 1) {
-                    inSingleQuotes = !inSingleQuotes;
-                    continue;
-                }
+            if (hasOuterQuotes && (j == 0 || j == arg.length() - 1)) {
+                // Skip the outermost single quotes
+                continue;
             }
 
-            if (inSingleQuotes) {
-                // Inside single quotes, preserve everything as-is
-                processed += arg[j];
-            } else if (arg[j] == '\\' && j + 1 < arg.length()) {
+            if (arg[j] == '\\' && j + 1 < arg.length()) {
                 char next = arg[j + 1];
-                if (next == '\'' || next == '"' || next == '\\') {
-                    // Preserve backslash for escaped quotes or backslashes
-                    processed += '\\';
+                if (!inSingleQuotes && (next == '\'' || next == '"')) {
+                    // Outside single quotes, remove backslash before quotes
                     processed += next;
-                    ++j; // Skip the next character
-                } else if (next == 'n') {
-                    // Preserve \n as-is
-                    processed += "\\n";
-                    ++j; // Skip the next character
+                    ++j;
                 } else {
-                    // For other escaped characters, keep them as-is
+                    // Preserve backslash and next character
                     processed += arg[j];
                     processed += next;
-                    ++j; // Skip the next character
+                    ++j;
                 }
+            } else if (arg[j] == '\'') {
+                inSingleQuotes = !inSingleQuotes;
+                processed += arg[j];
             } else {
-                // Add all other characters as-is
                 processed += arg[j];
             }
         }
