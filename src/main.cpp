@@ -171,6 +171,7 @@ int main() {
                     for (size_t j = 0; j < arg.size(); ++j) {
                         if (arg[j] == '\\' && j + 1 < arg.size() &&
                             (arg[j + 1] == '\'' || arg[j + 1] == '\"')) {
+                            output += '\\';
                             output += arg[j + 1];
                             ++j;
                         } else {
