@@ -125,28 +125,17 @@ int main() {
                     filePath = filePath.substr(1, filePath.size() - 2);
                 }
 
-                // Handle single quotes and backslashes in file names
-                std::string cleanedPath;
-                for (size_t j = 0; j < filePath.size(); ++j) {
-                    if (filePath[j] == '\\' && j + 1 < filePath.size()) {
-                        cleanedPath += filePath[++j];
-                    } else {
-                        cleanedPath += filePath[j];
-                    }
-                }
-
-                std::ifstream file(cleanedPath);
+                std::ifstream file(filePath);
                 if (!file) {
-                    std::cerr << "cat: " << cleanedPath << ": No such file or directory" << std::endl;
+                    std::cerr << "cat: " << filePath << ": No such file or directory" << std::endl;
                     continue;
                 }
 
-                std::string line;
-                while (std::getline(file, line)) {
-                    std::cout << line;
-                }
+                std::string content((std::istreambuf_iterator<char>(file)),
+                                     std::istreambuf_iterator<char>());
+                std::cout << content;
             }
-            std::cout << std::endl;
+            std::cout << std::flush;
         } else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
@@ -172,14 +161,13 @@ int main() {
                 std::string arg = args[i];
 
                 if (arg.size() >= 2 && arg.front() == '\'' && arg.back() == '\'') {
-                    output += arg.substr(1, arg.size() - 2);  // Literal handling for single quotes
+                    output += arg.substr(1, arg.size() - 2);
                 } else {
                     size_t pos = 0;
                     while ((pos = arg.find("\\n", pos)) != std::string::npos) {
                         arg.replace(pos, 2, "\n");
                         pos += 1;
                     }
-                    // Handle escaped quotes properly
                     for (size_t j = 0; j < arg.size(); ++j) {
                         if (arg[j] == '\\' && j + 1 < arg.size() &&
                             (arg[j + 1] == '\'' || arg[j + 1] == '\"')) {
