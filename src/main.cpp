@@ -126,46 +126,54 @@ int main() {
                 std::cerr << "Error getting current directory" << std::endl;
             }
         } else if (command == "cat") {
-            if (args.size() < 2) {
-                std::cerr << "cat: missing file operand" << std::endl;
-                continue;
+    if (args.size() < 2) {
+        std::cerr << "cat: missing file operand" << std::endl;
+        continue;
+    }
+
+    for (size_t i = 1; i < args.size(); ++i) {
+        std::string filePath = args[i];
+
+        // Handle both single and double quotes around file paths
+        if (filePath.size() >= 2 && 
+            ((filePath.front() == '\"' && filePath.back() == '\"') || 
+             (filePath.front() == '\'' && filePath.back() == '\''))) {
+            filePath = filePath.substr(1, filePath.size() - 2);  // Remove the surrounding quotes
+        }
+
+        // Process backslashes in the path
+        std::string cleanedPath;
+        bool inEscapeSequence = false;
+        for (size_t j = 0; j < filePath.size(); ++j) {
+            if (filePath[j] == '\\') {
+                if (j + 1 < filePath.size() && filePath[j + 1] == '\\') {
+                    // Handle escaped backslashes
+                    cleanedPath += '\\';
+                    j++;  // Skip the next backslash
+                } else {
+                    // Preserve the backslash if it's not escaping a character
+                    cleanedPath += '\\';
+                }
+            } else {
+                cleanedPath += filePath[j];
             }
+        }
 
-            for (size_t i = 1; i < args.size(); ++i) {
-                std::string filePath = args[i];
+        // Open the file and read its contents
+        std::ifstream file(cleanedPath);
+        if (!file) {
+            std::cerr << "cat: " << cleanedPath << ": No such file or directory" << std::endl;
+            continue;
+        }
 
-                if (filePath.size() >= 2 &&
-                    ((filePath.front() == '\"' && filePath.back() == '\"') ||
-                     (filePath.front() == '\'' && filePath.back() == '\''))) {
-                    filePath = filePath.substr(1, filePath.size() - 2);
-                }
-
-                // Handle single quotes and backslashes in file names
-                std::string cleanedPath;
-                for (size_t j = 0; j < filePath.size(); ++j) {
-                    if (filePath[j] == '\\' && j + 1 < filePath.size()) {
-                        cleanedPath += filePath[++j];
-                    } else {
-                        cleanedPath += filePath[j];
-                    }
-                }
-
-                // Remove any remaining single quotes within filenames
-                cleanedPath.erase(std::remove(cleanedPath.begin(), cleanedPath.end(), '\''), cleanedPath.end());
-
-                std::ifstream file(cleanedPath);
-                if (!file) {
-                    std::cerr << "cat: " << cleanedPath << ": No such file or directory" << std::endl;
-                    continue;
-                }
-
-                std::string line;
-                while (std::getline(file, line)) {
-                    std::cout << line;
-                }
-            }
-            std::cout << std::endl;
-        } else if (command == "cd") {
+        std::string line;
+        while (std::getline(file, line)) {
+            std::cout << line;
+        }
+    }
+    std::cout << std::endl;
+}
+ else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
                 continue;
