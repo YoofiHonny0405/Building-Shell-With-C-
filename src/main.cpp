@@ -190,7 +190,7 @@ int main() {
 
                 size_t pos = 0;
                 while (!singleQuoted && (pos = arg.find("\\n", pos)) != std::string::npos) {
-                    output += "\\n";
+                    output += '\n';
                     pos += 2;
                 }
                 output += arg;
