@@ -140,15 +140,18 @@ int main() {
                 }
 
                 // Handle single quotes and backslashes in file names
+                std::string cleanedPath;
                 for (size_t j = 0; j < filePath.size(); ++j) {
-                    if (filePath[j] == '\\') {
-                        filePath.erase(j, 1);
+                    if (filePath[j] == '\\' && j + 1 < filePath.size()) {
+                        cleanedPath += filePath[++j];
+                    } else {
+                        cleanedPath += filePath[j];
                     }
                 }
 
-                std::ifstream file(filePath);
+                std::ifstream file(cleanedPath);
                 if (!file) {
-                    std::cerr << "cat: " << filePath << ": No such file or directory" << std::endl;
+                    std::cerr << "cat: " << cleanedPath << ": No such file or directory" << std::endl;
                     continue;
                 }
 
