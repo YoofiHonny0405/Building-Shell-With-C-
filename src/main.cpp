@@ -172,52 +172,27 @@ int main() {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
         } else if (command == "echo") {
-    std::string output;
-    for (size_t i = 1; i < args.size(); ++i) {
-        if (i > 1) output += " ";
-        std::string arg = args[i];
+            std::string output;
+            bool singleQuoted = false;
 
-        std::string processed;
-        bool inSingleQuotes = false;
+            for (size_t i = 1; i < args.size(); ++i) {
+                if (i > 1) output += " ";
+                std::string arg = args[i];
 
-        for (size_t j = 0; j < arg.length(); ++j) {
-            if (arg[j] == '\'') {
-                if (j == 0 || j == arg.length() - 1) {
-                    // Skip outermost single quotes
-                    inSingleQuotes = !inSingleQuotes;
-                    continue;
+                if (arg.size() >= 2 && arg.front() == '\'' && arg.back() == '\'') {
+                    singleQuoted = true;
+                    arg = arg.substr(1, arg.size() - 2);
                 }
-            }
 
-            if (inSingleQuotes) {
-                // Inside single quotes, preserve everything as-is
-                processed += arg[j];
-            } else if (arg[j] == '\\' && j + 1 < arg.length()) {
-                // Outside single quotes, handle escaped characters
-                char next = arg[j + 1];
-                if (next == '\'' || next == '"') {
-                    // For escaped quotes, only add the quote
-                    processed += next;
-                    ++j;
-                } else if (next == 'n') {
-                    processed += "\\n";
-                    ++j;
-                } else {
-                    // For other escaped characters, keep the backslash
-                    processed += arg[j];
-                    processed += next;
-                    ++j;
+                size_t pos = 0;
+                while (!singleQuoted && (pos = arg.find("\\n", pos)) != std::string::npos) {
+                    arg.replace(pos, 2, "\\n");
+                    pos += 2;
                 }
-            } else {
-                processed += arg[j];
+                output += arg;
             }
-        }
-
-        output += processed;
-    }
-    std::cout << output << std::endl;
-}
- else {
+            std::cout << output << std::endl;
+        } else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
