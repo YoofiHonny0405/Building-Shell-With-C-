@@ -27,7 +27,7 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
         char c = str[i];
         if (c == '\\' && i + 1 < str.size()) {
             token += str[++i];
-        } else if (c == '\'' || c == '\"') {
+        } else if (c == '\'' || c == '"') {
             if (inQuotes && c == quoteChar) {
                 inQuotes = false;
                 quoteChar = '\0';
@@ -120,7 +120,7 @@ int main() {
                 std::string filePath = args[i];
 
                 if (filePath.size() >= 2 &&
-                    ((filePath.front() == '\"' && filePath.back() == '\"') ||
+                    ((filePath.front() == '"' && filePath.back() == '"') ||
                      (filePath.front() == '\'' && filePath.back() == '\''))) {
                     filePath = filePath.substr(1, filePath.size() - 2);
                 }
@@ -160,25 +160,16 @@ int main() {
                 if (i > 1) output += " ";
                 std::string arg = args[i];
 
-                if (arg.size() >= 2 && arg.front() == '\'' && arg.back() == '\'') {
-                    output += arg.substr(1, arg.size() - 2);
-                } else {
-                    size_t pos = 0;
-                    while ((pos = arg.find("\\n", pos)) != std::string::npos) {
-                        arg.replace(pos, 2, "\\n");
-                        pos += 2;
-                    }
-                    for (size_t j = 0; j < arg.size(); ++j) {
-                        if (arg[j] == '\\' && j + 1 < arg.size() &&
-                            (arg[j + 1] == '\'' || arg[j + 1] == '\"')) {
-                            output += '\\';
-                            output += arg[j + 1];
-                            ++j;
-                        } else {
-                            output += arg[j];
-                        }
-                    }
+                size_t pos = 0;
+                while ((pos = arg.find("\\n", pos)) != std::string::npos) {
+                    arg.replace(pos, 2, "\n");
+                    pos += 1;
                 }
+                while ((pos = arg.find("\\\"", pos)) != std::string::npos) {
+                    arg.replace(pos, 2, "\"");
+                    pos += 1;
+                }
+                output += arg;
             }
             std::cout << output << std::endl;
         } else {
