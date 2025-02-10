@@ -17,7 +17,6 @@
 
 namespace fs = std::filesystem;
 
-// Split function (defined once)
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -27,21 +26,20 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
         if (c == '\\' && i + 1 < str.size()) {
-            // Preserve backslash and handle escape sequences
             char nextChar = str[i + 1];
             if (nextChar == 'n') {
-                token += '\\'; // Ensure literal "\n" for output
-                token += 'n';
-                ++i;
+                token += "\\n";
+                i++;
             } else if (nextChar == ' ') {
                 token += ' ';
-                ++i;
+                i++;
             } else if (nextChar == '\\') {
                 token += '\\';
-                ++i;
+                i++;
             } else {
+                token += '\\';
                 token += nextChar;
-                ++i;
+                i++;
             }
         } else if (c == '\'' || c == '\"') {
             if (inQuotes && c == quoteChar) {
@@ -70,7 +68,6 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     return tokens;
 }
 
-// findExecutable function (defined once)
 std::string findExecutable(const std::string& command) {
     const char* pathEnv = std::getenv("PATH");
     if (!pathEnv) return "";
@@ -86,7 +83,6 @@ std::string findExecutable(const std::string& command) {
     return "";
 }
 
-// main function (defined once)
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
@@ -137,11 +133,17 @@ int main() {
             for (size_t i = 1; i < args.size(); ++i) {
                 std::string filePath = args[i];
 
-                // Remove surrounding quotes if present
                 if (filePath.size() >= 2 &&
                     ((filePath.front() == '\"' && filePath.back() == '\"') ||
                      (filePath.front() == '\'' && filePath.back() == '\''))) {
                     filePath = filePath.substr(1, filePath.size() - 2);
+                }
+
+                // Handle single quotes and backslashes in file names
+                for (size_t j = 0; j < filePath.size(); ++j) {
+                    if (filePath[j] == '\\') {
+                        filePath.erase(j, 1);
+                    }
                 }
 
                 std::ifstream file(filePath);
@@ -174,37 +176,27 @@ int main() {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
         } else if (command == "echo") {
-    std::string output;
-    for (size_t i = 1; i < args.size(); ++i) {
-        if (i > 1) output += " ";
-        std::string arg = args[i];
+            std::string output;
+            bool singleQuoted = false;
 
-        // Process escape sequences
-        std::string processed;
-        bool escape = false;
+            for (size_t i = 1; i < args.size(); ++i) {
+                if (i > 1) output += " ";
+                std::string arg = args[i];
 
-        for (size_t j = 0; j < arg.length(); ++j) {
-            if (escape) {
-                if (arg[j] == 'n') {
-                    processed += '\n'; // Add new line for \n
-                } else if (arg[j] == '\"') {
-                    processed += '\"'; // Preserve escaped quote
-                } else {
-                    processed += arg[j]; // Preserve any other escaped characters
+                if (arg.size() >= 2 && arg.front() == '\'' && arg.back() == '\'') {
+                    singleQuoted = true;
+                    arg = arg.substr(1, arg.size() - 2);
                 }
-                escape = false;
-            } else if (arg[j] == '\\') {
-                escape = true;  // Set escape mode for next character
-            } else {
-                processed += arg[j]; // Add regular characters
-            }
-        }
 
-        // Append the processed argument to the output
-        output += processed;
-    }
-    std::cout << output << std::endl;
-} else {
+                size_t pos = 0;
+                while (!singleQuoted && (pos = arg.find("\\n", pos)) != std::string::npos) {
+                    output += "\\n";
+                    pos += 2;
+                }
+                output += arg;
+            }
+            std::cout << output << std::endl;
+        } else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
