@@ -179,34 +179,30 @@ int main() {
 
         std::string processed;
         bool inSingleQuotes = false;
-        bool inDoubleQuotes = false;
 
         for (size_t j = 0; j < arg.length(); ++j) {
-            if (arg[j] == '\\' && j + 1 < arg.length()) {
-                char next = arg[j + 1];
-                if (inSingleQuotes || inDoubleQuotes) {
-                    // Inside quotes, preserve the backslash and the next character
-                    processed += '\\';
-                    processed += next;
-                } else {
-                    // Outside quotes, remove the backslash only if it escapes quotes
-                    if (next == '\'' || next == '"') {
-                        processed += next;
-                    } else if (next == ' ') {
-                        processed += ' '; // Handle escaped spaces
-                    } else {
-                        processed += arg[j]; // Preserve the backslash
-                        processed += next;
-                    }
+            if (arg[j] == '\'') {
+                if (j == 0 || j == arg.length() - 1) {
+                    // Skip outermost single quotes
+                    inSingleQuotes = !inSingleQuotes;
+                    continue;
                 }
-                ++j; // Skip the next character
-            } else if (arg[j] == '\'' && !inDoubleQuotes) {
-                inSingleQuotes = !inSingleQuotes; // Toggle single quotes
-                if (j == 0 || j == arg.length() - 1) continue; // Skip outermost quotes
+            }
+            
+            if (inSingleQuotes) {
+                // Inside single quotes, preserve everything as-is
                 processed += arg[j];
-            } else if (arg[j] == '"' && !inSingleQuotes) {
-                inDoubleQuotes = !inDoubleQuotes; // Toggle double quotes
-                processed += arg[j];
+            } else if (arg[j] == '\\' && j + 1 < arg.length()) {
+                // Outside single quotes, handle escaped characters
+                char next = arg[j + 1];
+                if (next == 'n') {
+                    processed += "\\n";
+                    ++j;
+                } else {
+                    processed += arg[j];
+                    processed += next;
+                    ++j;
+                }
             } else {
                 processed += arg[j];
             }
