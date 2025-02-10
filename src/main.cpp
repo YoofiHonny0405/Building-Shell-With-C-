@@ -164,38 +164,35 @@ int main() {
             if (chdir(targetDir.c_str()) != 0) {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
-        }else if (command == "echo") {
-    std::string output;
-    for (size_t i = 1; i < args.size(); ++i) {
-        if (i > 1) output += " ";
-        std::string arg = args[i];
+        } else if (command == "echo") {
+            std::string output;
 
-        if (arg.size() >= 2 && arg.front() == '\'' && arg.back() == '\'') {
-            // For arguments enclosed in single quotes, print literally without the quotes
-            output += arg.substr(1, arg.size() - 2);
-        } else {
-            // For other arguments, process escaped characters
-            for (size_t j = 0; j < arg.size(); ++j) {
-                if (arg[j] == '\\' && j + 1 < arg.size()) {
-                    char next = arg[j + 1];
-                    if (next == 'n') {
-                        output += '\n';
-                        ++j;
-                    } else if (next == '\'' || next == '"' || next == '\\') {
-                        output += next;
-                        ++j;
-                    } else {
-                        output += arg[j];
-                    }
+            for (size_t i = 1; i < args.size(); ++i) {
+                if (i > 1) output += " ";
+                std::string arg = args[i];
+
+                if (arg.size() >= 2 && arg.front() == '\'' && arg.back() == '\'') {
+                    output += arg.substr(1, arg.size() - 2);  // Literal handling for single quotes
                 } else {
-                    output += arg[j];
+                    size_t pos = 0;
+                    while ((pos = arg.find("\\n", pos)) != std::string::npos) {
+                        arg.replace(pos, 2, "\n");
+                        pos += 1;
+                    }
+                    // Handle escaped quotes properly
+                    for (size_t j = 0; j < arg.size(); ++j) {
+                        if (arg[j] == '\\' && j + 1 < arg.size() &&
+                            (arg[j + 1] == '\'' || arg[j + 1] == '\"')) {
+                            output += arg[j + 1];
+                            ++j;
+                        } else {
+                            output += arg[j];
+                        }
+                    }
                 }
             }
-        }
-    }
-    std::cout << output << std::endl;
-}
-else {
+            std::cout << output << std::endl;
+        } else {
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
