@@ -177,28 +177,36 @@ int main() {
         if (i > 1) output += " ";
         std::string arg = args[i];
 
-        // Handle escaped characters
         std::string processed;
+        bool inSingleQuotes = false;
+        bool inDoubleQuotes = false;
+
         for (size_t j = 0; j < arg.length(); ++j) {
             if (arg[j] == '\\' && j + 1 < arg.length()) {
                 char next = arg[j + 1];
-                if (next == '\'' || next == '"' || next == '\\') {
-                    processed += '\\'; // Preserve the backslash
-                    processed += next; // Add the escaped character
-                    ++j;               // Skip the backslash
-                } else {
-                    processed += arg[j]; // Add the backslash itself
-                    processed += next;   // Add the next character
+                if (!inSingleQuotes && !inDoubleQuotes) {
+                    if (next == '\'' || next == '"') {
+                        processed += next;
+                        ++j;
+                    } else {
+                        processed += arg[j];
+                    }
+                } else if (inDoubleQuotes && (next == '"' || next == '\\')) {
+                    processed += arg[j];
+                    processed += next;
                     ++j;
+                } else {
+                    processed += arg[j];
                 }
+            } else if (arg[j] == '\'' && !inDoubleQuotes) {
+                inSingleQuotes = !inSingleQuotes;
+                processed += arg[j];
+            } else if (arg[j] == '"' && !inSingleQuotes) {
+                inDoubleQuotes = !inDoubleQuotes;
+                processed += arg[j];
             } else {
                 processed += arg[j];
             }
-        }
-
-        // Remove surrounding single quotes if present
-        if (processed.size() >= 2 && processed.front() == '\'' && processed.back() == '\'') {
-            processed = processed.substr(1, processed.size() - 2);
         }
 
         output += processed;
