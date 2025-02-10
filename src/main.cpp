@@ -175,35 +175,33 @@ int main() {
     std::string output;
 
     for (size_t i = 1; i < args.size(); ++i) {
-        if (i > 1) output += " ";
+        if (i > 1) output += " "; // Add space between arguments
         std::string arg = args[i];
 
         std::string processed;
-        bool inSingleQuotes = false;
-        bool hasOuterQuotes = (arg.length() >= 2 && arg.front() == '\'' && arg.back() == '\'');
+        bool hasOuterSingleQuotes = (arg.length() >= 2 && arg.front() == '\'' && arg.back() == '\'');
 
         for (size_t j = 0; j < arg.length(); ++j) {
-            if (hasOuterQuotes && (j == 0 || j == arg.length() - 1)) {
+            if (hasOuterSingleQuotes && (j == 0 || j == arg.length() - 1)) {
                 // Skip the outermost single quotes
                 continue;
             }
 
             if (arg[j] == '\\' && j + 1 < arg.length()) {
                 char next = arg[j + 1];
-                if (!inSingleQuotes && (next == '\'' || next == '"')) {
-                    // Outside single quotes, remove backslash before quotes
+                if (next == '"' || next == '\'' || next == '\\') {
+                    // Preserve backslash for escaped quotes or backslashes
+                    processed += '\\';
                     processed += next;
-                    ++j;
+                    ++j; // Skip the next character
                 } else {
-                    // Preserve backslash and next character
+                    // Handle other escaped characters literally
                     processed += arg[j];
                     processed += next;
-                    ++j;
+                    ++j; // Skip the next character
                 }
-            } else if (arg[j] == '\'') {
-                inSingleQuotes = !inSingleQuotes;
-                processed += arg[j];
             } else {
+                // Add all other characters as-is
                 processed += arg[j];
             }
         }
