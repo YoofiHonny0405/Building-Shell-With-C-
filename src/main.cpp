@@ -183,6 +183,7 @@ int main() {
             if (arg[j] == '\\' && j + 1 < arg.length()) {
                 char next = arg[j + 1];
                 if (next == '\'' || next == '"' || next == '\\') {
+                    processed += '\\'; // Preserve the backslash
                     processed += next; // Add the escaped character
                     ++j;               // Skip the backslash
                 } else {
