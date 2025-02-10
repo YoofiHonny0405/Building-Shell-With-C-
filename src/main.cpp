@@ -173,54 +173,50 @@ int main() {
             }
         } else if (command == "echo") {
     std::string output;
-
     for (size_t i = 1; i < args.size(); ++i) {
         if (i > 1) output += " ";
         std::string arg = args[i];
 
         std::string processed;
         bool inSingleQuotes = false;
-        bool inDoubleQuotes = false;
 
         for (size_t j = 0; j < arg.length(); ++j) {
-            if (arg[j] == '\'' && !inDoubleQuotes) {
-                // Toggle single quote mode
-                inSingleQuotes = !inSingleQuotes;
-                continue;  // Skip the quote itself
-            }
-
-            if (arg[j] == '\"' && !inSingleQuotes) {
-                // Toggle double quote mode
-                inDoubleQuotes = !inDoubleQuotes;
-                continue;  // Skip the quote itself
-            }
-
             if (arg[j] == '\\' && j + 1 < arg.length()) {
+                // Handle escaped characters
                 char next = arg[j + 1];
-                if (next == '\'' || next == '"' || next == '\\') {
-                    // Preserve backslash for escaped quotes or backslashes
-                    processed += '\\';
+                if (!inSingleQuotes && (next == '\'' || next == '"')) {
+                    // Remove backslash if escaping a quote outside single quotes
                     processed += next;
-                    ++j; // Skip the next character
-                } else if (next == 'n') {
-                    // Preserve \n as-is
-                    processed += "\\n";
-                    ++j; // Skip the next character
+                    ++j;
                 } else {
-                    // For other escaped characters, keep them as-is
+                    // Otherwise, preserve the backslash and the next character
                     processed += arg[j];
                     processed += next;
-                    ++j; // Skip the next character
+                    ++j;
                 }
-            } else {
-                // Add all other characters as-is
+            } else if (arg[j] == '\'') {
+                // Toggle single quote state, but only remove surrounding quotes
+                if (j == 0 && j == arg.length() - 1) {
+                    inSingleQuotes = !inSingleQuotes; //just toggle in single quotes
+                }
+               else if (j == 0 || j == arg.length() -1){
+                    // remove the outer quotes, its contents already processed
+                   inSingleQuotes = !inSingleQuotes;
+                    continue;
+
+                }
+                else {
+                     processed += arg[j];
+                }
+
+            }
+             else {
                 processed += arg[j];
             }
         }
 
         output += processed;
     }
-
     std::cout << output << std::endl;
 }
  else {
