@@ -188,7 +188,7 @@ int main() {
                     continue;
                 }
             }
-            
+
             if (inSingleQuotes) {
                 // Inside single quotes, preserve everything as-is
                 processed += arg[j];
