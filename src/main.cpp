@@ -173,25 +173,27 @@ int main() {
             }
         } else if (command == "echo") {
     std::string output;
+
     for (size_t i = 1; i < args.size(); ++i) {
         if (i > 1) output += " ";
         std::string arg = args[i];
 
-        bool inSingleQuotes = false;
         std::string processed;
+        bool inSingleQuotes = false;
 
         for (size_t j = 0; j < arg.length(); ++j) {
             if (arg[j] == '\'') {
-                // Toggle single quote mode and skip the quote itself
-                inSingleQuotes = !inSingleQuotes;
-                continue;
+                // Toggle single quote mode and skip outermost quotes
+                if (j == 0 || j == arg.length() - 1) {
+                    inSingleQuotes = !inSingleQuotes;
+                    continue;
+                }
             }
 
             if (inSingleQuotes) {
                 // Inside single quotes, preserve everything as-is
                 processed += arg[j];
             } else if (arg[j] == '\\' && j + 1 < arg.length()) {
-                // Handle escaped characters outside of single quotes
                 char next = arg[j + 1];
                 if (next == '\'' || next == '"' || next == '\\') {
                     // Preserve backslash for escaped quotes or backslashes
@@ -216,6 +218,7 @@ int main() {
 
         output += processed;
     }
+
     std::cout << output << std::endl;
 }
  else {
