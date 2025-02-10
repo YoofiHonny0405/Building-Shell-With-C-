@@ -149,6 +149,9 @@ int main() {
                     }
                 }
 
+                // Remove any remaining single quotes within filenames
+                cleanedPath.erase(std::remove(cleanedPath.begin(), cleanedPath.end(), '\''), cleanedPath.end());
+
                 std::ifstream file(cleanedPath);
                 if (!file) {
                     std::cerr << "cat: " << cleanedPath << ": No such file or directory" << std::endl;
