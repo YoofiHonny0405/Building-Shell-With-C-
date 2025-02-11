@@ -18,7 +18,6 @@
 
 namespace fs = std::filesystem;
 
-// Custom split function that preserves escapes literally when inside single quotes.
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -29,16 +28,16 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
         char c = str[i];
 
         if (c == '\\' && i + 1 < str.size()) {
-            // If we're inside single quotes, preserve the backslash and the next character literally.
+            // If inside single quotes, preserve the backslash and next char literally.
             if (inQuotes && quoteChar == '\'') {
                 token.push_back('\\');
                 token.push_back(str[i + 1]);
                 i++;
             } else {
-                // Outside single quotes (or inside double quotes), the backslash escapes the next character.
+                // Otherwise, use the next character (the backslash escapes it).
                 token.push_back(str[++i]);
             }
-        }
+        } 
         else if (c == '\'' || c == '"') {
             if (!inQuotes) {
                 inQuotes = true;
@@ -49,14 +48,13 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
             } else {
                 token.push_back(c);
             }
-        }
+        } 
         else if (c == delimiter && !inQuotes) {
             if (!token.empty()) {
                 tokens.push_back(token);
                 token.clear();
             }
-        }
-        else {
+        } else {
             token.push_back(c);
         }
     }
@@ -117,7 +115,7 @@ int main() {
                     std::cout << targetCommand << ": not found" << std::endl;
                 }
             }
-        }
+        } 
         else if (command == "pwd") {
             char currentDir[PATH_MAX];
             if (getcwd(currentDir, sizeof(currentDir))) {
@@ -125,7 +123,7 @@ int main() {
             } else {
                 std::cerr << "Error getting current directory" << std::endl;
             }
-        }
+        } 
         else if (command == "cat") {
             if (args.size() < 2) {
                 std::cerr << "cat: missing file operand" << std::endl;
@@ -142,18 +140,30 @@ int main() {
                     filePath = filePath.substr(1, filePath.size() - 2);
                 }
 
+                // Unescape the file path: remove backslashes used for escaping.
+                std::string unescaped;
+                for (size_t j = 0; j < filePath.size(); j++) {
+                    if (filePath[j] == '\\' && j + 1 < filePath.size()) {
+                        unescaped.push_back(filePath[j + 1]);
+                        j++;
+                    } else {
+                        unescaped.push_back(filePath[j]);
+                    }
+                }
+                filePath = unescaped;
+
                 std::ifstream file(filePath);
                 if (!file) {
-                    std::cerr << "cat: " << args[i] << ": No such file or directory" << std::endl;
+                    std::cerr << "cat: " << filePath << ": No such file or directory" << std::endl;
                     continue;
                 }
 
                 std::string content((std::istreambuf_iterator<char>(file)),
-                                     std::istreambuf_iterator<char>());
+                                    std::istreambuf_iterator<char>());
                 std::cout << content;
             }
             std::cout << std::flush;
-        }
+        } 
         else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
@@ -171,7 +181,7 @@ int main() {
             if (chdir(targetDir.c_str()) != 0) {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
-        }
+        } 
         else if (command == "echo") {
             // Simply join the arguments with a space.
             std::string output;
@@ -180,7 +190,7 @@ int main() {
                 output += args[i];
             }
             std::cout << output << std::endl;
-        }
+        } 
         else {
             pid_t pid = fork();
             if (pid == -1) {
