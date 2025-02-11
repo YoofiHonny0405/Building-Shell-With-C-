@@ -155,6 +155,7 @@ int main() {
             }
         }else if (command == "echo") {
             std::string output;
+        
             for (size_t i = 1; i < args.size(); ++i) {
                 if (i > 1) output += " ";
                 std::string arg = args[i];
@@ -167,18 +168,36 @@ int main() {
                     pos += 1;
                 }
         
-                // Handle escaped double quotes (`\"` to `"`)
+                // Handle escaped double quotes (`\"` to `"`).
                 pos = 0;
                 while ((pos = arg.find("\\\"", pos)) != std::string::npos) {
                     arg.replace(pos, 2, "\"");
                 }
         
+                // Handle escaped single quotes (`\'` to `'`)
+                pos = 0;
+                while ((pos = arg.find("\\\'", pos)) != std::string::npos) {
+                    arg.replace(pos, 2, "\'");
+                }
+        
                 // Keep `\\n` intact as required (no replacement)
+        
+                // For single quotes ('), we need to output the exact behavior:
+                // Add `'"` before and after single quotes
+                size_t singleQuotePos = 0;
+                while ((singleQuotePos = arg.find('\'', singleQuotePos)) != std::string::npos) {
+                    arg.insert(singleQuotePos, "\"");
+                    singleQuotePos += 2;  // Move past the inserted quote
+                    arg.insert(singleQuotePos, "\"");
+                    ++singleQuotePos;
+                }
         
                 output += arg;
             }
+        
             std::cout << output << std::endl;
         }
+        
         else {
             pid_t pid = fork();
             if (pid == -1) {
