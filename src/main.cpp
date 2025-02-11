@@ -180,10 +180,7 @@ int main() {
                     arg.replace(pos, 2, "\'");
                 }
         
-                // Keep `\\n` intact as required (no replacement)
-        
-                // For single quotes ('), we need to output the exact behavior:
-                // Add `'"` before and after single quotes
+                // For single quotes ('), insert them literally as desired
                 size_t singleQuotePos = 0;
                 while ((singleQuotePos = arg.find('\'', singleQuotePos)) != std::string::npos) {
                     arg.insert(singleQuotePos, "\"");
