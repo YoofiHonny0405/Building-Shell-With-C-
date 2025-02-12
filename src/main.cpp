@@ -18,7 +18,9 @@
 
 namespace fs = std::filesystem;
 
-// Custom split function that preserves escapes literally when inside single quotes.
+// Modified split function:
+// - Outside quotes, a backslash escapes the next character (without preserving the backslash).
+// - Inside quotes, the backslash is preserved along with the next character.
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -28,22 +30,29 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
 
-        // Preserve escaped characters.
         if (c == '\\' && i + 1 < str.size()) {
-            token.push_back(c);          // keep the backslash
-            token.push_back(str[++i]);     // then the next character verbatim
+            char nextChar = str[i + 1];
+            if (!inSingleQuotes && !inDoubleQuotes) {
+                // Outside any quotes: escape the next character (do not include the backslash)
+                token.push_back(nextChar);
+                i++; // Skip the next character since it has been processed.
+            } else {
+                // Inside quotes: preserve the backslash and the next character.
+                token.push_back(c);
+                token.push_back(nextChar);
+                i++;
+            }
         }
-        // Toggle single quotes (if not inside double quotes)
         else if (c == '\'' && !inDoubleQuotes) {
+            // Toggle single quotes
             inSingleQuotes = !inSingleQuotes;
-            token.push_back(c);  // Preserve quote for now
+            token.push_back(c); // Preserve the quote character for echo output.
         }
-        // Toggle double quotes (if not inside single quotes)
         else if (c == '"' && !inSingleQuotes) {
+            // Toggle double quotes
             inDoubleQuotes = !inDoubleQuotes;
-            token.push_back(c);  // Preserve quote for now
+            token.push_back(c); // Preserve the quote character for echo output.
         }
-        // If we encounter a delimiter outside any quotes, split.
         else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
             if (!token.empty()) {
                 tokens.push_back(token);
@@ -75,22 +84,22 @@ std::string findExecutable(const std::string& command) {
     return "";
 }
 
-// For cat: remove surrounding quotes and leave escapes intact.
+// For the cat command: remove any surrounding quotes.
 std::string unescapePath(const std::string& path) {
     std::string result;
     bool inSingleQuotes = false;
     bool inDoubleQuotes = false;
+
     for (size_t i = 0; i < path.size(); ++i) {
         char c = path[i];
         if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
-            continue; // remove outer quotes
+            continue; // remove the quote character
         }
         if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
-            continue; // remove outer quotes
+            continue; // remove the quote character
         }
-        // For our file paths, leave backslashes as-is (they were already preserved by split)
         result.push_back(c);
     }
     return result;
@@ -176,7 +185,7 @@ int main() {
         }
         else if (command == "echo") {
             std::string output;
-            // Process each token: if it is enclosed in matching quotes, remove them.
+            // For echo, if a token is enclosed in matching quotes, strip the outer quotes.
             for (size_t i = 1; i < args.size(); i++) {
                 std::string token = args[i];
                 if (token.size() >= 2 &&
