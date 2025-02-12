@@ -173,22 +173,27 @@ int main() {
             }
             for (size_t i = 1; i < args.size(); ++i) {
                 std::string filePath = args[i];
-                if (filePath.size() >= 2 && ((filePath.front() == '\"' && filePath.back() == '\"') ||
-                                             (filePath.front() == '\'' && filePath.back() == '\''))) {
+
+                // Handle paths with backslashes or quotes
+                if (filePath.size() >= 2 &&
+                    ((filePath.front() == '"' && filePath.back() == '"') ||
+                     (filePath.front() == '\'' && filePath.back() == '\''))) {
                     filePath = filePath.substr(1, filePath.size() - 2);
                 }
-                filePath = unescapePath(filePath);
+
                 std::ifstream file(filePath);
                 if (!file) {
                     std::cerr << "cat: " << filePath << ": No such file or directory" << std::endl;
                     continue;
                 }
-                std::string content((std::istreambuf_iterator<char>(file)),
-                                     std::istreambuf_iterator<char>());
-                std::cout << content;
+
+                std::string line;
+                while (std::getline(file, line)) {
+                    std::cout << line;
+                }
             }
-            std::cout << std::flush;
-        }
+            std::cout << std::endl;
+        } 
         
         else if (command == "cd") {
             if (args.size() < 2) {
