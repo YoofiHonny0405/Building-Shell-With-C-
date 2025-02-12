@@ -123,47 +123,30 @@ int main() {
             } else {
                 std::cerr << "Error getting current directory" << std::endl;
             }
-        } 
-        else if (command == "cat") {
+        }else if (command == "cat") {
             if (args.size() < 2) {
                 std::cerr << "cat: missing file operand" << std::endl;
                 continue;
             }
-
             for (size_t i = 1; i < args.size(); ++i) {
                 std::string filePath = args[i];
-
-                // Remove surrounding quotes if present.
-                if (filePath.size() >= 2 &&
-                    ((filePath.front() == '"' && filePath.back() == '"') ||
-                     (filePath.front() == '\'' && filePath.back() == '\''))) {
+                if (filePath.size() >= 2 && ((filePath.front() == '\"' && filePath.back() == '\"') ||
+                                             (filePath.front() == '\'' && filePath.back() == '\''))) {
                     filePath = filePath.substr(1, filePath.size() - 2);
                 }
-
-                // Unescape the file path: remove backslashes used for escaping.
-                std::string unescaped;
-                for (size_t j = 0; j < filePath.size(); j++) {
-                    if (filePath[j] == '\\' && j + 1 < filePath.size()) {
-                        unescaped.push_back(filePath[j + 1]);
-                        j++;
-                    } else {
-                        unescaped.push_back(filePath[j]);
-                    }
-                }
-                filePath = unescaped;
-
+                filePath = unescapePath(filePath);
                 std::ifstream file(filePath);
                 if (!file) {
                     std::cerr << "cat: " << filePath << ": No such file or directory" << std::endl;
                     continue;
                 }
-
                 std::string content((std::istreambuf_iterator<char>(file)),
-                                    std::istreambuf_iterator<char>());
+                                     std::istreambuf_iterator<char>());
                 std::cout << content;
             }
             std::cout << std::flush;
-        } 
+        }
+        
         else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
