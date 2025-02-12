@@ -19,7 +19,7 @@
 namespace fs = std::filesystem;
 
 // Custom split function.
-// Outside of any quotes, a backslash escapes the next character (and the backslash is not preserved).
+// Outside any quotes, a backslash escapes the next character (and the backslash is not preserved).
 // Inside single quotes, backslashes are preserved literally.
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
@@ -33,9 +33,9 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
         if (c == '\\' && i + 1 < str.size()) {
             char nextChar = str[i+1];
             if (!inSingleQuotes && !inDoubleQuotes) {
-                // Outside any quotes: consume backslash and add only the next character.
+                // Outside quotes: consume backslash and add only the next character.
                 token.push_back(nextChar);
-                i++; // Skip next character.
+                i++; // Skip the next character.
             } else {
                 // Inside quotes: preserve both the backslash and next character.
                 token.push_back(c);
@@ -45,11 +45,11 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
         }
         else if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
-            token.push_back(c); // Preserve quote for echo output.
+            token.push_back(c); // Preserve quote for later processing.
         }
         else if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
-            token.push_back(c); // Preserve quote for echo output.
+            token.push_back(c); // Preserve quote for later processing.
         }
         else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
             if (!token.empty()) {
@@ -61,11 +61,9 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
             token.push_back(c);
         }
     }
-    
     if (!token.empty()) {
         tokens.push_back(token);
     }
-    
     return tokens;
 }
 
@@ -78,11 +76,11 @@ std::string unescapePath(const std::string& path) {
         char c = path[i];
         if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
-            continue;
+            continue; // remove the quote
         }
         if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
-            continue;
+            continue; // remove the quote
         }
         result.push_back(c);
     }
@@ -184,19 +182,25 @@ int main() {
         }
         else if (command == "echo") {
             std::string output;
-            // For echo, if a token is enclosed in matching quotes, process as follows:
-            // - If double-quoted, remove all double quotes.
-            // - If single-quoted, remove only the outer quotes.
+            // Process each token for echo.
+            // If a token is enclosed in matching quotes, remove them.
+            // For tokens originally enclosed in single quotes, also remove any consecutive pair of single quotes.
+            // For tokens originally enclosed in double quotes, remove them entirely.
             for (size_t i = 1; i < args.size(); i++) {
                 std::string token = args[i];
-                if (token.size() >= 2 && (token.front() == token.back()) && (token.front() == '"' || token.front() == '\'')) {
+                if (token.size() >= 2 && (token.front() == token.back()) &&
+                    (token.front() == '\'' || token.front() == '"')) {
                     char quoteChar = token.front();
-                    if (quoteChar == '"') {
-                        // Remove all double quotes from the token.
-                        token.erase(std::remove(token.begin(), token.end(), '"'), token.end());
-                    } else { // single quote
-                        // Remove only the outermost quotes.
-                        token = token.substr(1, token.size() - 2);
+                    token = token.substr(1, token.size() - 2);
+                    if (quoteChar == '\'') {
+                        // Remove any consecutive single quotes.
+                        while (token.find("''") != std::string::npos) {
+                            token.replace(token.find("''"), 2, "");
+                        }
+                    } else if (quoteChar == '"') {
+                        while (token.find("\"\"") != std::string::npos) {
+                            token.replace(token.find("\"\""), 2, "");
+                        }
                     }
                 }
                 if (i > 1) output += " ";
