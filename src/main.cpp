@@ -27,17 +27,20 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
 
-        // Handle escape sequences
+        // Preserve escaped characters
         if (c == '\\' && i + 1 < str.size()) {
-            token.push_back(str[++i]);
+            token.push_back(c); // Keep the backslash
+            token.push_back(str[++i]); // Include the next character as-is
         }
         // Toggle single quotes
         else if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
+            token.push_back(c); // Preserve quote for echo
         }
         // Toggle double quotes
         else if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
+            token.push_back(c); // Preserve quote for echo
         }
         // Split by delimiter if outside quotes
         else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
@@ -199,16 +202,14 @@ int main() {
             if (chdir(targetDir.c_str()) != 0) {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
-        } 
-        else if (command == "echo") {
-            // Simply join the arguments with a space.
+        } else if (command == "echo") {
             std::string output;
-            for (size_t i = 1; i < args.size(); ++i) {
+            for (size_t i = 1; i < args.size(); i++) {
                 if (i > 1) output += " ";
                 output += args[i];
             }
             std::cout << output << std::endl;
-        } 
+        }        
         else {
             pid_t pid = fork();
             if (pid == -1) {
