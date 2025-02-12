@@ -88,13 +88,9 @@ std::string unescapePath(const std::string& path) {
 
         // Handle backslashes
         if (c == '\\' && i + 1 < path.size()) {
-            // Check next character
-            char nextChar = path[i + 1];
-            if (nextChar == '\\' || nextChar == '\'' || nextChar == '"' || nextChar == ' ') {
-                result += nextChar; // Take the next character literally
-                i++; // Skip the escaped character
-                continue;
-            }
+            // Take the next character literally
+            result += path[++i];
+            continue;
         }
 
         // Add character to result
@@ -103,6 +99,7 @@ std::string unescapePath(const std::string& path) {
 
     return result;
 }
+
 
 
 
