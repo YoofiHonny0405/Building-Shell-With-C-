@@ -18,12 +18,8 @@
 
 namespace fs = std::filesystem;
 
-// Custom split function:
-// - Outside any quotes, a backslash escapes the next character. In particular, if the escaped character is a double quote,
-//   we output two double quotes.
-// - Inside single quotes, backslashes are preserved literally.
-// - Inside double quotes, if a backslash is followed by one of: \, $, ", or newline, then the backslash is consumed and only the
-//   following character is added. Otherwise, the backslash is preserved.
+// Standard split function for commands other than echo.
+// (This version processes escapes as before.)
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -36,24 +32,18 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
         if (c == '\\' && i + 1 < str.size()) {
             char nextChar = str[i+1];
             if (!inSingleQuotes && !inDoubleQuotes) {
-                // Outside any quotes: if nextChar is a double quote, output two double quotes.
-                if (nextChar == '"') {
-                    token.push_back('"');
-                    token.push_back('"');
-                } else {
-                    token.push_back(nextChar);
-                }
-                i++; // Consume next character.
+                token.push_back(nextChar);
+                i++; // Skip next character.
             } else if (inDoubleQuotes) {
-                // Inside double quotes:
                 if (nextChar == '\\' || nextChar == '$' || nextChar == '"' || nextChar == '\n') {
                     token.push_back(nextChar);
+                    i++;
                 } else {
                     token.push_back('\\');
                     token.push_back(nextChar);
+                    i++;
                 }
-                i++;
-            } else { // in single quotes
+            } else { // in single quotes: preserve literally.
                 token.push_back('\\');
                 token.push_back(nextChar);
                 i++;
@@ -61,11 +51,11 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
         }
         else if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
-            token.push_back(c); // Preserve the quote for later echo processing.
+            token.push_back(c); // Preserve quote for later processing.
         }
         else if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
-            token.push_back(c); // Preserve the quote.
+            token.push_back(c); // Preserve quote.
         }
         else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
             if (!token.empty()) {
@@ -77,14 +67,13 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
             token.push_back(c);
         }
     }
-    
     if (!token.empty()) {
         tokens.push_back(token);
     }
     return tokens;
 }
 
-// For the cat command: remove any surrounding quotes from the file path.
+// For the cat command: remove surrounding quotes.
 std::string unescapePath(const std::string& path) {
     std::string result;
     bool inSingleQuotes = false;
@@ -93,11 +82,11 @@ std::string unescapePath(const std::string& path) {
         char c = path[i];
         if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
-            continue; // remove the quote.
+            continue;
         }
         if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
-            continue; // remove the quote.
+            continue;
         }
         result.push_back(c);
     }
@@ -119,6 +108,54 @@ std::string findExecutable(const std::string& command) {
     return "";
 }
 
+// processEcho: Process the echo argument string per the special rules for
+// backslashes within double quotes.
+// This function processes the entire remainder of the input line (after "echo ").
+std::string processEcho(const std::string& s) {
+    std::string output;
+    bool inDouble = false;
+    bool inSingle = false;
+    bool escaped = false;
+    
+    for (size_t i = 0; i < s.size(); i++) {
+        char c = s[i];
+        
+        if (escaped) {
+            if (inDouble) {
+                // Inside double quotes, backslash escapes only \, $, ", newline.
+                if (c == '\\' || c == '$' || c == '"' || c == '\n') {
+                    output.push_back(c);
+                } else {
+                    output.push_back('\\');
+                    output.push_back(c);
+                }
+            } else {
+                // Outside quotes, if c is a double quote, output two.
+                if (c == '"') {
+                    output.push_back('"');
+                    output.push_back('"');
+                } else {
+                    output.push_back(c);
+                }
+            }
+            escaped = false;
+        } else if (c == '\\') {
+            escaped = true;
+        } else if (c == '"' && !inSingle) {
+            // Toggle double quote state, but do not output the delimiter.
+            inDouble = !inDouble;
+        } else if (c == '\'' && !inDouble) {
+            inSingle = !inSingle;
+        } else {
+            output.push_back(c);
+        }
+    }
+    if (escaped) {
+        output.push_back('\\');
+    }
+    return output;
+}
+
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
@@ -129,14 +166,21 @@ int main() {
         std::cout << "$ ";
         std::string input;
         std::getline(std::cin, input);
-        if (input == "exit 0") { break; }
+        if (input == "exit 0") break;
         
+        // Determine the command by splitting on spaces.
         std::vector<std::string> args = split(input, ' ');
         if (args.empty()) continue;
-        
         std::string command = args[0];
         
-        if (command == "type") {
+        if (command == "echo") {
+            // For echo, take the entire substring after the first space.
+            size_t pos = input.find(' ');
+            std::string echoArg = (pos == std::string::npos) ? "" : input.substr(pos + 1);
+            std::string result = processEcho(echoArg);
+            std::cout << result << std::endl;
+        }
+        else if (command == "type") {
             if (args.size() < 2) {
                 std::cout << "type: missing argument" << std::endl;
                 continue;
@@ -146,27 +190,25 @@ int main() {
                 std::cout << targetCommand << " is a shell builtin" << std::endl;
             } else {
                 std::string execPath = findExecutable(targetCommand);
-                if (!execPath.empty()) {
+                if (!execPath.empty())
                     std::cout << targetCommand << " is " << execPath << std::endl;
-                } else {
+                else
                     std::cout << targetCommand << ": not found" << std::endl;
-                }
             }
         }
         else if (command == "pwd") {
             char currentDir[PATH_MAX];
-            if (getcwd(currentDir, sizeof(currentDir))) {
+            if (getcwd(currentDir, sizeof(currentDir)))
                 std::cout << currentDir << std::endl;
-            } else {
+            else
                 std::cerr << "Error getting current directory" << std::endl;
-            }
         }
         else if (command == "cat") {
             if (args.size() < 2) {
                 std::cerr << "cat: missing file operand" << std::endl;
                 continue;
             }
-            for (size_t i = 1; i < args.size(); ++i) {
+            for (size_t i = 1; i < args.size(); i++) {
                 std::string filePath = unescapePath(args[i]);
                 std::ifstream file(filePath);
                 if (!file) {
@@ -193,25 +235,8 @@ int main() {
                 }
                 targetDir = homeDir;
             }
-            if (chdir(targetDir.c_str()) != 0) {
+            if (chdir(targetDir.c_str()) != 0)
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
-            }
-        }
-        else if (command == "echo") {
-            std::string output;
-            // For echo: For each token, if it is enclosed in matching quotes, remove the outer quotes.
-            // This applies to both single and double quotes.
-            for (size_t i = 1; i < args.size(); i++) {
-                std::string token = args[i];
-                if (token.size() >= 2 &&
-                    ((token.front() == '\'' && token.back() == '\'') ||
-                     (token.front() == '"' && token.back() == '"'))) {
-                    token = token.substr(1, token.size() - 2);
-                }
-                if (i > 1) output += " ";
-                output += token;
-            }
-            std::cout << output << std::endl;
         }
         else {
             pid_t pid = fork();
@@ -219,9 +244,8 @@ int main() {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if (pid == 0) {
                 std::vector<char*> execArgs;
-                for (auto& arg : args) {
+                for (auto& arg : args)
                     execArgs.push_back(const_cast<char*>(arg.c_str()));
-                }
                 execArgs.push_back(nullptr);
                 if (execvp(execArgs[0], execArgs.data()) == -1) {
                     std::cerr << command << ": command not found" << std::endl;
