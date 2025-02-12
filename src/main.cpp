@@ -24,38 +24,52 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     bool inQuotes = false;
     char quoteChar = '\0';
 
-    for (size_t i = 0; i < str.size(); ++i) {
+    for (size_t i = 0; i < str.size(); i++) {
         char c = str[i];
+
         if (c == '\\' && i + 1 < str.size()) {
-            token += str[++i];
-        } else if (c == '\'' || c == '\"') {
-            if (inQuotes && c == quoteChar) {
-                inQuotes = false;
-                quoteChar = '\0';
-            } else if (!inQuotes) {
+            // If inside single quotes, preserve the backslash and next char literally.
+            if (inQuotes && quoteChar == '\'') {
+                token.push_back('\\');
+                token.push_back(str[i + 1]);
+                i++;
+            } else {
+                // Otherwise, use the next character (the backslash escapes it).
+                token.push_back(str[++i]);
+            }
+        } 
+        else if (c == '\'' || c == '"') {
+            if (!inQuotes) {
                 inQuotes = true;
                 quoteChar = c;
+            } else if (c == quoteChar) {
+                inQuotes = false;
+                quoteChar = '\0';
             } else {
-                token += c;
+                token.push_back(c);
             }
-        } else if (c == ' ' && !inQuotes) {
+        } 
+        else if (c == delimiter && !inQuotes) {
             if (!token.empty()) {
                 tokens.push_back(token);
                 token.clear();
             }
         } else {
-            token += c;
+            token.push_back(c);
         }
     }
+
     if (!token.empty()) {
         tokens.push_back(token);
     }
+
     return tokens;
 }
 
 std::string findExecutable(const std::string& command) {
     const char* pathEnv = std::getenv("PATH");
     if (!pathEnv) return "";
+
     std::istringstream iss(pathEnv);
     std::string path;
     while (std::getline(iss, path, ':')) {
@@ -70,21 +84,27 @@ std::string findExecutable(const std::string& command) {
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
+
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd"};
+
     while (true) {
         std::cout << "$ ";
         std::string input;
         std::getline(std::cin, input);
         if (input == "exit 0") { break; }
+
         std::vector<std::string> args = split(input, ' ');
         if (args.empty()) continue;
+
         std::string command = args[0];
+
         if (command == "type") {
             if (args.size() < 2) {
                 std::cout << "type: missing argument" << std::endl;
                 continue;
             }
             std::string targetCommand = args[1];
+
             if (builtins.count(targetCommand)) {
                 std::cout << targetCommand << " is a shell builtin" << std::endl;
             } else {
@@ -95,36 +115,56 @@ int main() {
                     std::cout << targetCommand << ": not found" << std::endl;
                 }
             }
-        } else if (command == "pwd") {
+        } 
+        else if (command == "pwd") {
             char currentDir[PATH_MAX];
             if (getcwd(currentDir, sizeof(currentDir))) {
                 std::cout << currentDir << std::endl;
             } else {
                 std::cerr << "Error getting current directory" << std::endl;
             }
-        } else if (command == "cat") {
+        } 
+        else if (command == "cat") {
             if (args.size() < 2) {
                 std::cerr << "cat: missing file operand" << std::endl;
                 continue;
             }
+
             for (size_t i = 1; i < args.size(); ++i) {
                 std::string filePath = args[i];
+
+                // Remove surrounding quotes if present.
                 if (filePath.size() >= 2 &&
-                    ((filePath.front() == '\"' && filePath.back() == '\"') ||
+                    ((filePath.front() == '"' && filePath.back() == '"') ||
                      (filePath.front() == '\'' && filePath.back() == '\''))) {
                     filePath = filePath.substr(1, filePath.size() - 2);
                 }
+
+                // Unescape the file path: remove backslashes used for escaping.
+                std::string unescaped;
+                for (size_t j = 0; j < filePath.size(); j++) {
+                    if (filePath[j] == '\\' && j + 1 < filePath.size()) {
+                        unescaped.push_back(filePath[j + 1]);
+                        j++;
+                    } else {
+                        unescaped.push_back(filePath[j]);
+                    }
+                }
+                filePath = unescaped;
+
                 std::ifstream file(filePath);
                 if (!file) {
                     std::cerr << "cat: " << filePath << ": No such file or directory" << std::endl;
                     continue;
                 }
+
                 std::string content((std::istreambuf_iterator<char>(file)),
-                                     std::istreambuf_iterator<char>());
+                                    std::istreambuf_iterator<char>());
                 std::cout << content;
             }
             std::cout << std::flush;
-        } else if (command == "cd") {
+        } 
+        else if (command == "cd") {
             if (args.size() < 2) {
                 std::cerr << "cd: missing argument" << std::endl;
                 continue;
@@ -141,16 +181,36 @@ int main() {
             if (chdir(targetDir.c_str()) != 0) {
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
-        } else if (command == "echo") {
+        } 
+        else if (command == "echo") {
+            // Simply join the arguments with a space.
             std::string output;
             for (size_t i = 1; i < args.size(); ++i) {
                 if (i > 1) output += " ";
-                std::string arg = args[i];
-                if (arg.size() >= 2 && arg.front() == '\'' && arg.back() == '\'') {
-                    output += arg.substr(1, arg.size() - 2);
-                } else {
-                    size_t pos = 0;
-                    while ((pos = arg.find("\\n", pos)) != std::string::npos) {\n                        // Do not convert \\n to newline; leave as literal\n                        pos += 2;\n                    }\n                    while ((pos = arg.find("\\\"", pos)) != std::string::npos) {\n                        arg.replace(pos, 2, "\\\"");\n                        pos += 2;\n                    }\n                    output += arg;\n                }\n            }\n            std::cout << output << std::endl;\n        } else {\n            pid_t pid = fork();\n            if (pid == -1) {\n                std::cerr << \"Failed to fork process\" << std::endl;\n            } else if (pid == 0) {\n                std::vector<char*> execArgs;\n                for (auto& arg : args) {\n                    execArgs.push_back(const_cast<char*>(arg.c_str()));\n                }\n                execArgs.push_back(nullptr);\n                if (execvp(execArgs[0], execArgs.data()) == -1) {\n                    std::cerr << command << \": command not found\" << std::endl;\n                    exit(EXIT_FAILURE);\n                }\n            } else {\n                int status;\n                waitpid(pid, &status, 0);\n            }\n        }\n    }\n    return 0;\n}\n"
+                output += args[i];
+            }
+            std::cout << output << std::endl;
+        } 
+        else {
+            pid_t pid = fork();
+            if (pid == -1) {
+                std::cerr << "Failed to fork process" << std::endl;
+            } else if (pid == 0) {
+                std::vector<char*> execArgs;
+                for (auto& arg : args) {
+                    execArgs.push_back(const_cast<char*>(arg.c_str()));
+                }
+                execArgs.push_back(nullptr);
+                if (execvp(execArgs[0], execArgs.data()) == -1) {
+                    std::cerr << command << ": command not found" << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+            } else {
+                int status;
+                waitpid(pid, &status, 0);
+            }
+        }
     }
-  ]
+
+    return 0;
 }
