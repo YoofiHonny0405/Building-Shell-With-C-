@@ -71,13 +71,22 @@ std::string unescapePath(const std::string& path) {
     for (size_t i = 0; i < path.size(); ++i) {
         // If backslash is found and it's not the last character
         if (path[i] == '\\' && i + 1 < path.size()) {
-            result += path[++i]; // Skip the backslash and take the next character literally
+            // Handle escaped backslash
+            if (path[i + 1] == '\\') {
+                result += '\\';
+                i++; // Skip the next character as it's part of the escape
+            }
+            // Handle other escaped characters
+            else {
+                result += path[++i];
+            }
         } else {
             result += path[i];
         }
     }
     return result;
 }
+
 
 
 std::string findExecutable(const std::string& command) {
