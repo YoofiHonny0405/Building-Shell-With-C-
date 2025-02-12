@@ -68,24 +68,42 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
 
 std::string unescapePath(const std::string& path) {
     std::string result;
+    bool inSingleQuotes = false;
+    bool inDoubleQuotes = false;
+
     for (size_t i = 0; i < path.size(); ++i) {
-        // If backslash is found and it's not the last character
-        if (path[i] == '\\' && i + 1 < path.size()) {
-            // Handle escaped backslash
-            if (path[i + 1] == '\\') {
-                result += '\\';
-                i++; // Skip the next character as it's part of the escape
-            }
-            // Handle other escaped characters
-            else {
-                result += path[++i];
-            }
-        } else {
-            result += path[i];
+        char c = path[i];
+
+        // Toggle state for single quotes
+        if (c == '\'' && !inDoubleQuotes) {
+            inSingleQuotes = !inSingleQuotes;
+            continue; // Skip the quote character
         }
+
+        // Toggle state for double quotes
+        if (c == '"' && !inSingleQuotes) {
+            inDoubleQuotes = !inDoubleQuotes;
+            continue; // Skip the quote character
+        }
+
+        // Handle backslashes
+        if (c == '\\' && i + 1 < path.size()) {
+            // Check next character
+            char nextChar = path[i + 1];
+            if (nextChar == '\\' || nextChar == '\'' || nextChar == '"' || nextChar == ' ') {
+                result += nextChar; // Take the next character literally
+                i++; // Skip the escaped character
+                continue;
+            }
+        }
+
+        // Add character to result
+        result += c;
     }
+
     return result;
 }
+
 
 
 
