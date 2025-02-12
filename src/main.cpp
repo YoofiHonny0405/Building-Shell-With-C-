@@ -66,6 +66,20 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     return tokens;
 }
 
+std::string unescapePath(const std::string& path) {
+    std::string result;
+    for (size_t i = 0; i < path.size(); ++i) {
+        // If backslash is found and it's not the last character
+        if (path[i] == '\\' && i + 1 < path.size()) {
+            result += path[++i]; // Skip the backslash and take the next character literally
+        } else {
+            result += path[i];
+        }
+    }
+    return result;
+}
+
+
 std::string findExecutable(const std::string& command) {
     const char* pathEnv = std::getenv("PATH");
     if (!pathEnv) return "";
