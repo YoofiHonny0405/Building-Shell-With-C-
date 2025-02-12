@@ -18,11 +18,12 @@
 
 namespace fs = std::filesystem;
 
-// Modified split function:
-// - Outside any quotes, a backslash escapes the next character (backslash is not preserved).
-// - Inside single quotes, all characters (including backslashes) are preserved literally.
-// - Inside double quotes, a backslash has its special meaning only when followed by
-//   one of: \, $, " or newline. Otherwise, the backslash is preserved.
+// Custom split function:
+// - Outside any quotes, a backslash escapes the next character. In particular, if the escaped character is a double quote,
+//   we output two double quotes.
+// - Inside single quotes, backslashes are preserved literally.
+// - Inside double quotes, if a backslash is followed by one of: \, $, ", or newline, then the backslash is consumed and only the
+//   following character is added. Otherwise, the backslash is preserved.
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -34,37 +35,35 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
         
         if (c == '\\' && i + 1 < str.size()) {
             char nextChar = str[i+1];
-            if (inSingleQuotes) {
-                // In single quotes, preserve the backslash and the next character literally.
-                token.push_back(c);
-                token.push_back(nextChar);
+            if (!inSingleQuotes && !inDoubleQuotes) {
+                // Outside any quotes: if nextChar is a double quote, output two double quotes.
+                if (nextChar == '"') {
+                    token.push_back('"');
+                    token.push_back('"');
+                } else {
+                    token.push_back(nextChar);
+                }
                 i++; // Consume next character.
-            }
-            else if (inDoubleQuotes) {
-                // In double quotes, check if nextChar is one of: \, $, ", newline.
+            } else if (inDoubleQuotes) {
+                // Inside double quotes:
                 if (nextChar == '\\' || nextChar == '$' || nextChar == '"' || nextChar == '\n') {
                     token.push_back(nextChar);
-                    i++;
                 } else {
-                    // Otherwise, preserve both.
-                    token.push_back(c);
+                    token.push_back('\\');
                     token.push_back(nextChar);
-                    i++;
                 }
-            }
-            else {
-                // Outside any quotes: backslash escapes the next character (backslash not preserved).
+                i++;
+            } else { // in single quotes
+                token.push_back('\\');
                 token.push_back(nextChar);
                 i++;
             }
         }
         else if (c == '\'' && !inDoubleQuotes) {
-            // Toggle single quotes.
             inSingleQuotes = !inSingleQuotes;
-            token.push_back(c); // Preserve the quote (we later remove outer quotes in echo).
+            token.push_back(c); // Preserve the quote for later echo processing.
         }
         else if (c == '"' && !inSingleQuotes) {
-            // Toggle double quotes.
             inDoubleQuotes = !inDoubleQuotes;
             token.push_back(c); // Preserve the quote.
         }
@@ -78,13 +77,14 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
             token.push_back(c);
         }
     }
+    
     if (!token.empty()) {
         tokens.push_back(token);
     }
     return tokens;
 }
 
-// For the cat command: remove surrounding quotes from the file path.
+// For the cat command: remove any surrounding quotes from the file path.
 std::string unescapePath(const std::string& path) {
     std::string result;
     bool inSingleQuotes = false;
@@ -93,11 +93,11 @@ std::string unescapePath(const std::string& path) {
         char c = path[i];
         if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
-            continue; // Remove the quote.
+            continue; // remove the quote.
         }
         if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
-            continue; // Remove the quote.
+            continue; // remove the quote.
         }
         result.push_back(c);
     }
@@ -199,7 +199,8 @@ int main() {
         }
         else if (command == "echo") {
             std::string output;
-            // For echo, if a token is enclosed in matching quotes, remove the outer quotes.
+            // For echo: For each token, if it is enclosed in matching quotes, remove the outer quotes.
+            // This applies to both single and double quotes.
             for (size_t i = 1; i < args.size(); i++) {
                 std::string token = args[i];
                 if (token.size() >= 2 &&
