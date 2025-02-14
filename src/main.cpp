@@ -87,52 +87,43 @@ std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
     bool inDouble = false, inSingle = false;
 
+    // Loop through all arguments passed to echo
     for (size_t i = 1; i < args.size(); i++) {
         std::string currentPart = args[i];
 
         for (size_t j = 0; j < currentPart.size(); j++) {
             char c = currentPart[j];
 
-            // Handle quote switching
+            // Handle single and double quotes
             if (c == '"' && !inSingle) {
-                inDouble = !inDouble; // Toggle double quotes state
+                inDouble = !inDouble;
                 continue;
             }
             if (c == '\'' && !inDouble) {
-                inSingle = !inSingle; // Toggle single quotes state
+                inSingle = !inSingle;
                 continue;
             }
 
-            // Handle backslashes
-            if (c == '\\') {
-                if (inDouble) {
-                    // Escape sequence handling inside double quotes
-                    if (j + 1 < currentPart.size()) {
-                        char nextChar = currentPart[j + 1];
-                        // Handle escaping of backslashes and quotes inside double quotes
-                        if (nextChar == '\\' || nextChar == '"') {
-                            output.push_back(nextChar);
-                            j++; // Skip next character
-                        } else {
-                            output.push_back('\\');
-                        }
-                    } else {
-                        output.push_back('\\');
-                    }
-                } else if (inSingle) {
-                    // Inside single quotes, just add the backslash
-                    output.push_back('\\');
+            // Handle escape sequences: \ followed by a character
+            if (c == '\\' && j + 1 < currentPart.size()) {
+                char nextChar = currentPart[j + 1];
+
+                // Handle common escape sequences
+                if (nextChar == '\\' || nextChar == '\'' || nextChar == '\"') {
+                    output.push_back(nextChar); // output escaped character
+                    j++; // Skip the next character as it's part of the escape sequence
                 } else {
-                    // Outside any quotes, treat backslash normally
+                    // If not a known escape sequence, output the backslash itself
                     output.push_back(c);
                 }
-            } else {
-                // Add normal characters to output
-                output.push_back(c);
+                continue; // Move to the next character
             }
+
+            // Regular character, add to output
+            output.push_back(c);
         }
 
-        // Add space between arguments except after the last argument
+        // Add space between arguments (except for the last argument)
         if (i < args.size() - 1) {
             output.push_back(' ');
         }
