@@ -37,10 +37,15 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
             inSingleQuotes = !inSingleQuotes;
             token.push_back(c);
         }
-        // Toggle double quotes, but preserve them
+        // Toggle double quotes but preserve only in pairs
         else if (c == '"' && !inSingleQuotes) {
-            inDoubleQuotes = !inDoubleQuotes;
-            token.push_back(c);
+            if (inDoubleQuotes) {
+                inDoubleQuotes = false;
+                token.push_back(c); // Closing quote
+            } else {
+                inDoubleQuotes = true;
+                token.push_back(c); // Opening quote
+            }
         }
         // Split by delimiter if outside quotes
         else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
@@ -61,6 +66,7 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
 
     return tokens;
 }
+
 
 std::string unescapePath(const std::string& path) {
     std::string result;
