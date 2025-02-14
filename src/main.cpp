@@ -66,29 +66,37 @@ std::string unescapePath(const std::string& path) {
     return result;
 }
 
-// Corrected processEcho function
 std::string processEcho(const std::vector<std::string>& args) {
-   std::string output;
-    for (size_t i = 0; i < args.size(); ++i) {
-        if (i > 0) output += " ";
+    std::string output;
+    for (size_t i = 1; i < args.size(); ++i) {  // Start from 1 to skip the "echo" command
+        if (i > 1) output += " ";
         std::string arg = args[i];
-        bool inSingleQuotes = false;
         bool inDoubleQuotes = false;
-        for (size_t j = 0; j < arg.size(); ++j) {
-            char c = arg[j];
-            if (c == '\\' && j + 1 < arg.size()) {
-                //Handle escape characters
-                char next = arg[j + 1];
-                 output += next;
-                  ++j;
-            } else {
-                output += c;
-            }
 
+        for (size_t j = 0; j < arg.size(); ++j) {
+            if (arg[j] == '"' && (j == 0 || j == arg.size() - 1)) {
+                // Skip outermost double quotes
+                continue;
+            }
+            if (arg[j] == '"') {
+                inDoubleQuotes = !inDoubleQuotes;
+                output += arg[j];
+            } else if (arg[j] == '\\' && j + 1 < arg.size()) {
+                char next = arg[j + 1];
+                if (next == '\\' || next == '"' || (next == '\'' && !inDoubleQuotes)) {
+                    output += next;
+                    ++j;
+                } else {
+                    output += arg[j];
+                }
+            } else {
+                output += arg[j];
+            }
         }
     }
     return output;
 }
+
 
 std::string findExecutable(const std::string& command) {
     const char* pathEnv = std::getenv("PATH");
@@ -143,9 +151,9 @@ int main() {
             if (targetDir == "~") { const char* homeDir = std::getenv("HOME"); if (!homeDir) { std::cerr << "cd: HOME not set" << std::endl; continue; } targetDir = homeDir; }
             if (chdir(targetDir.c_str()) != 0) std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
         } else if (command == "echo") {
-            std::string result = processEcho(std::vector<std::string>(args.begin() + 1, args.end()));
-            std::cout << result << std::endl;
-        } else {
+            std::cout << processEcho(args) << std::endl;
+        }
+        else {
             pid_t pid = fork();
             if (pid == -1) { std::cerr << "Failed to fork process" << std::endl; }
             else if (pid == 0) {
