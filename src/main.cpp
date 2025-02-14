@@ -110,7 +110,6 @@ std::string processEcho(const std::string& s) {
     
     for (size_t i = 0; i < s.size(); i++) {
         char c = s[i];
-        
         if (escaped) {
             if (inDouble) {
                 if (c == '\\' || c == '$' || c == '"' || c == '\n') {
@@ -123,10 +122,9 @@ std::string processEcho(const std::string& s) {
                 output.push_back('\\');
                 output.push_back(c);
             } else {
-                // Outside any quotes: if c is a double quote,
-                // if this is the last character, output two; otherwise output one.
                 if (c == '"') {
-                    if (i == s.size() - 1)
+                    // Outside quotes, if this is the last character, output two double quotes.
+                    if (i == s.size()-1)
                         output.append("\"\"");
                     else
                         output.push_back('"');
@@ -147,11 +145,6 @@ std::string processEcho(const std::string& s) {
     }
     if (escaped)
         output.push_back('\\');
-    
-    // If output ends with three double quotes, remove one.
-    if (output.size() >= 3 && output.substr(output.size()-3) == "\"\"\"")
-        output.erase(output.size()-1);
-    
     return output;
 }
 
@@ -260,6 +253,5 @@ int main() {
             }
         }
     }
-    
     return 0;
 }
