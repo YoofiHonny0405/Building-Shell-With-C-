@@ -18,6 +18,71 @@
 
 namespace fs = std::filesystem;
 
+std::vector<std::string> split(const std::string& str, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    bool inSingleQuotes = false, inDoubleQuotes = false;
+    for (size_t i = 0; i < str.size(); ++i) {
+        char c = str[i];
+        if (c == '\\' && i + 1 < str.size()) {
+            char nextChar = str[i+1];
+            if (!inSingleQuotes && !inDoubleQuotes) {
+                token.push_back(nextChar);
+                i++;
+            } else if (inDoubleQuotes) {
+                if (nextChar == '\\' || nextChar == '$' || nextChar == '"' || nextChar == '\n') {
+                    token.push_back(nextChar);
+                    i++;
+                } else {
+                    token.push_back('\\');
+                    token.push_back(nextChar);
+                    i++;
+                }
+            } else {
+                token.push_back('\\');
+                token.push_back(nextChar);
+                i++;
+            }
+        } else if (c == '\'' && !inDoubleQuotes) {
+            inSingleQuotes = !inSingleQuotes;
+            token.push_back(c);
+        } else if (c == '"' && !inSingleQuotes) {
+            inDoubleQuotes = !inDoubleQuotes;
+            token.push_back(c);
+        } else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
+            if (!token.empty()) { tokens.push_back(token); token.clear(); }
+        } else {
+            token.push_back(c);
+        }
+    }
+    if (!token.empty()) tokens.push_back(token);
+    return tokens;
+}
+
+std::string unescapePath(const std::string& path) {
+    std::string result;
+    bool inSingleQuotes = false, inDoubleQuotes = false;
+    for (size_t i = 0; i < path.size(); ++i) {
+        char c = path[i];
+        if (c == '\'' && !inDoubleQuotes) { inSingleQuotes = !inSingleQuotes; continue; }
+        if (c == '"' && !inSingleQuotes) { inDoubleQuotes = !inDoubleQuotes; continue; }
+        result.push_back(c);
+    }
+    return result;
+}
+
+std::string findExecutable(const std::string& command) {
+    const char* pathEnv = std::getenv("PATH");
+    if (!pathEnv) return "";
+    std::istringstream iss(pathEnv);
+    std::string path;
+    while (std::getline(iss, path, ':')) {
+        std::string fullPath = path + "/" + command;
+        if (access(fullPath.c_str(), X_OK) == 0) return fullPath;
+    }
+    return "";
+}
+
 std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
     bool inDouble = false, inSingle = false;
@@ -62,81 +127,6 @@ std::string processEcho(const std::vector<std::string>& args) {
     }
     return output;
 }
-
-
-std::string unescapePath(const std::string& path) {
-    std::string result;
-    bool inSingleQuotes = false, inDoubleQuotes = false;
-    for (size_t i = 0; i < path.size(); ++i) {
-        char c = path[i];
-        if (c == '\'' && !inDoubleQuotes) { inSingleQuotes = !inSingleQuotes; continue; }
-        if (c == '"' && !inSingleQuotes) { inDoubleQuotes = !inDoubleQuotes; continue; }
-        result.push_back(c);
-    }
-    return result;
-}
-
-std::string findExecutable(const std::string& command) {
-    const char* pathEnv = std::getenv("PATH");
-    if (!pathEnv) return "";
-    std::istringstream iss(pathEnv);
-    std::string path;
-    while (std::getline(iss, path, ':')) {
-        std::string fullPath = path + "/" + command;
-        if (access(fullPath.c_str(), X_OK) == 0) return fullPath;
-    }
-    return "";
-}
-
-std::string processEcho(const std::vector<std::string>& args) {
-    std::string output;
-    bool inDouble = false, inSingle = false;
-    
-    for (size_t i = 1; i < args.size(); i++) {
-        std::string currentPart = args[i];
-        
-        for (size_t j = 0; j < currentPart.size(); j++) {
-            char c = currentPart[j];
-            
-            if (c == '"' && !inSingle) {
-                inDouble = !inDouble;
-                continue;
-            }
-            if (c == '\'' && !inDouble) {
-                inSingle = !inSingle;
-                continue;
-            }
-            
-            if (inSingle) {
-                output.push_back(c);
-            } else if (inDouble) {
-                if (c == '\\' && j + 1 < currentPart.size()) {
-                    char nextChar = currentPart[j + 1];
-                    if (nextChar == '\\' || nextChar == '"') {
-                        output.push_back(nextChar);
-                        j++;
-                    } else {
-                        output.push_back(c);
-                    }
-                } else {
-                    output.push_back(c);
-                }
-            } else {
-                if (c == '\\' && j + 1 < currentPart.size()) {
-                    output.push_back(currentPart[++j]);
-                } else {
-                    output.push_back(c);
-                }
-            }
-        }
-        
-        if (i < args.size() - 1) {
-            output.push_back(' ');
-        }
-    }
-    return output;
-}
-
 
 
 int main() {
