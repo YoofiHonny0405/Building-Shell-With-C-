@@ -18,8 +18,6 @@
 
 namespace fs = std::filesystem;
 
-// Standard split function for commands other than echo.
-// (It processes backslashes outside quotes by consuming them.)
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -42,7 +40,7 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
                     token.push_back(nextChar);
                     i++;
                 }
-            } else { // in single quotes
+            } else { // in single quotes: preserve literally.
                 token.push_back('\\');
                 token.push_back(nextChar);
                 i++;
@@ -50,11 +48,11 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
         }
         else if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
-            token.push_back(c); // Preserve for later echo processing.
+            token.push_back(c); // Preserve for later processing.
         }
         else if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
-            token.push_back(c); // Preserve for later echo processing.
+            token.push_back(c); // Preserve for later processing.
         }
         else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
             if (!token.empty()) {
@@ -66,13 +64,12 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
             token.push_back(c);
         }
     }
-    if (!token.empty()) {
+    if (!token.empty())
         tokens.push_back(token);
-    }
     return tokens;
 }
 
-// For cat: remove surrounding quotes from the file path.
+
 std::string unescapePath(const std::string& path) {
     std::string result;
     bool inSingleQuotes = false;
@@ -100,16 +97,12 @@ std::string findExecutable(const std::string& command) {
     std::string path;
     while (std::getline(iss, path, ':')) {
         std::string fullPath = path + "/" + command;
-        if (access(fullPath.c_str(), X_OK) == 0) {
+        if (access(fullPath.c_str(), X_OK) == 0)
             return fullPath;
-        }
     }
     return "";
 }
 
-// processEcho: Process the echo argument string per the special rules
-// for backslashes within double quotes.
-// This function processes the entire substring following "echo ".
 std::string processEcho(const std::string& s) {
     std::string output;
     bool inDouble = false;
@@ -118,25 +111,25 @@ std::string processEcho(const std::string& s) {
     
     for (size_t i = 0; i < s.size(); i++) {
         char c = s[i];
+        
         if (escaped) {
             if (inDouble) {
-                // Inside double quotes, backslash escapes only \, $, ", newline.
+                // Inside double quotes: backslash escapes \, $, ", newline.
                 if (c == '\\' || c == '$' || c == '"' || c == '\n') {
                     output.push_back(c);
                 } else {
                     output.push_back('\\');
                     output.push_back(c);
                 }
+            } else if (inSingle) {
+                // Inside single quotes, do not process escape; output backslash and character.
+                output.push_back('\\');
+                output.push_back(c);
             } else {
-                // Outside quotes, if c is a double quote, output two,
-                // except if this is the last character.
+                // Outside any quotes: if c is a double quote, output two double quotes.
                 if (c == '"') {
-                    if (i == s.size()-1)
-                        output.push_back('"');
-                    else {
-                        output.push_back('"');
-                        output.push_back('"');
-                    }
+                    output.push_back('"');
+                    output.push_back('"');
                 } else {
                     output.push_back(c);
                 }
@@ -152,9 +145,8 @@ std::string processEcho(const std::string& s) {
             output.push_back(c);
         }
     }
-    if (escaped) {
+    if (escaped)
         output.push_back('\\');
-    }
     return output;
 }
 
@@ -167,21 +159,23 @@ int main() {
         std::cout << "$ ";
         std::string input;
         std::getline(std::cin, input);
-        if (input == "exit 0") break;
+        if (input == "exit 0")
+            break;
         
         // If the command is echo, process it specially.
         size_t pos = input.find(' ');
         std::string command = (pos == std::string::npos) ? input : input.substr(0, pos);
         
         if (command == "echo") {
+            
             std::string echoArg = (pos == std::string::npos) ? "" : input.substr(pos + 1);
             std::string result = processEcho(echoArg);
             std::cout << result << std::endl;
-        }
-        else {
-            // For other commands, use the standard split.
+        } else {
+            
             std::vector<std::string> args = split(input, ' ');
-            if (args.empty()) continue;
+            if (args.empty())
+                continue;
             command = args[0];
             
             if (command == "type") {
@@ -190,24 +184,22 @@ int main() {
                     continue;
                 }
                 std::string targetCommand = args[1];
-                if (builtins.count(targetCommand)) {
+                if (builtins.count(targetCommand))
                     std::cout << targetCommand << " is a shell builtin" << std::endl;
-                } else {
+                else {
                     std::string execPath = findExecutable(targetCommand);
-                    if (!execPath.empty()) {
+                    if (!execPath.empty())
                         std::cout << targetCommand << " is " << execPath << std::endl;
-                    } else {
+                    else
                         std::cout << targetCommand << ": not found" << std::endl;
-                    }
                 }
             }
             else if (command == "pwd") {
                 char currentDir[PATH_MAX];
-                if (getcwd(currentDir, sizeof(currentDir))) {
+                if (getcwd(currentDir, sizeof(currentDir)))
                     std::cout << currentDir << std::endl;
-                } else {
+                else
                     std::cerr << "Error getting current directory" << std::endl;
-                }
             }
             else if (command == "cat") {
                 if (args.size() < 2) {
@@ -241,9 +233,8 @@ int main() {
                     }
                     targetDir = homeDir;
                 }
-                if (chdir(targetDir.c_str()) != 0) {
+                if (chdir(targetDir.c_str()) != 0)
                     std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
-                }
             }
             else {
                 pid_t pid = fork();
@@ -251,9 +242,8 @@ int main() {
                     std::cerr << "Failed to fork process" << std::endl;
                 } else if (pid == 0) {
                     std::vector<char*> execArgs;
-                    for (auto& arg : args) {
+                    for (auto& arg : args)
                         execArgs.push_back(const_cast<char*>(arg.c_str()));
-                    }
                     execArgs.push_back(nullptr);
                     if (execvp(execArgs[0], execArgs.data()) == -1) {
                         std::cerr << command << ": command not found" << std::endl;
@@ -266,5 +256,6 @@ int main() {
             }
         }
     }
+    
     return 0;
 }
