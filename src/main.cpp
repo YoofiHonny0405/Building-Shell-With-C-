@@ -86,24 +86,35 @@ std::string findExecutable(const std::string& command) {
 std::string processEcho(const std::string& s) {
     std::string output;
     bool inDouble = false, inSingle = false, escaped = false;
+    std::string currentPart;
     for (size_t i = 0; i < s.size(); i++) {
         char c = s[i];
         if (escaped) {
-            if (inDouble) {
-                if (c == '\\' || c == '$' || c == '"' || c == '\n')
-                    output.push_back(c);
-                else { output.push_back('\\'); output.push_back(c); }
-            } else if (inSingle) { output.push_back('\\'); output.push_back(c); }
-            else { if (c == '"') output.push_back('"'); else output.push_back(c); }
+            currentPart.push_back(c);
             escaped = false;
-        } else if (c == '\\') { escaped = true; }
-        else if (c == '"' && !inSingle) { inDouble = !inDouble; }
-        else if (c == '\'' && !inDouble) { inSingle = !inSingle; }
-        else { output.push_back(c); }
+        } else if (c == '\\') {
+            escaped = true;
+        } else if (c == '"' && !inSingle) {
+            inDouble = !inDouble;
+        } else if (c == '\'' && !inDouble) {
+            inSingle = !inSingle;
+        } else if (c == ' ' && !inSingle && !inDouble) {
+            if (!currentPart.empty()) {
+                if (!output.empty()) output += " ";
+                output += currentPart;
+                currentPart.clear();
+            }
+        } else {
+            currentPart.push_back(c);
+        }
     }
-    if (escaped) output.push_back('\\');
+    if (!currentPart.empty()) {
+        if (!output.empty()) output += " ";
+        output += currentPart;
+    }
     return output;
 }
+
 
 int main() {
     std::cout << std::unitbuf;
