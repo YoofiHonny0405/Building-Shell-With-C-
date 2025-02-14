@@ -18,46 +18,51 @@
 
 namespace fs = std::filesystem;
 
-std::vector<std::string> split(const std::string& str, char delimiter) {
-    std::vector<std::string> tokens;
-    std::string token;
-    bool inSingleQuotes = false, inDoubleQuotes = false;
-    for (size_t i = 0; i < str.size(); ++i) {
-        char c = str[i];
-        if (c == '\\' && i + 1 < str.size()) {
-            char nextChar = str[i+1];
-            if (!inSingleQuotes && !inDoubleQuotes) {
-                token.push_back(nextChar);
-                i++;
-            } else if (inDoubleQuotes) {
-                if (nextChar == '\\' || nextChar == '$' || nextChar == '"' || nextChar == '\n') {
-                    token.push_back(nextChar);
-                    i++;
+std::string processEcho(const std::vector<std::string>& args) {
+    std::string output;
+    bool inDouble = false, inSingle = false;
+
+    for (size_t i = 1; i < args.size(); i++) {
+        std::string currentPart = args[i];
+        
+        for (size_t j = 0; j < currentPart.size(); j++) {
+            char c = currentPart[j];
+            
+            // Toggle quote states
+            if (c == '"' && !inSingle) {
+                inDouble = !inDouble;
+                continue;
+            }
+            if (c == '\'' && !inDouble) {
+                inSingle = !inSingle;
+                continue;
+            }
+
+            // Handle escape sequences inside double quotes
+            if (inDouble) {
+                if (c == '\\' && j + 1 < currentPart.size()) {
+                    char nextChar = currentPart[j + 1];
+                    if (nextChar == '\\' || nextChar == '"' || nextChar == '$') {
+                        output.push_back(nextChar);
+                        j++;
+                    } else {
+                        output.push_back(c); // Keep the backslash as-is
+                    }
                 } else {
-                    token.push_back('\\');
-                    token.push_back(nextChar);
-                    i++;
+                    output.push_back(c);
                 }
             } else {
-                token.push_back('\\');
-                token.push_back(nextChar);
-                i++;
+                output.push_back(c); // Outside quotes, just add the character
             }
-        } else if (c == '\'' && !inDoubleQuotes) {
-            inSingleQuotes = !inSingleQuotes;
-            token.push_back(c);
-        } else if (c == '"' && !inSingleQuotes) {
-            inDoubleQuotes = !inDoubleQuotes;
-            token.push_back(c);
-        } else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
-            if (!token.empty()) { tokens.push_back(token); token.clear(); }
-        } else {
-            token.push_back(c);
+        }
+        
+        if (i < args.size() - 1) {
+            output.push_back(' ');
         }
     }
-    if (!token.empty()) tokens.push_back(token);
-    return tokens;
+    return output;
 }
+
 
 std::string unescapePath(const std::string& path) {
     std::string result;
