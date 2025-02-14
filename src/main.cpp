@@ -111,10 +111,8 @@ std::string processEcho(const std::string& s) {
     
     for (size_t i = 0; i < s.size(); i++) {
         char c = s[i];
-        
         if (escaped) {
             if (inDouble) {
-                // Inside double quotes: backslash escapes \, $, ", newline.
                 if (c == '\\' || c == '$' || c == '"' || c == '\n') {
                     output.push_back(c);
                 } else {
@@ -122,14 +120,18 @@ std::string processEcho(const std::string& s) {
                     output.push_back(c);
                 }
             } else if (inSingle) {
-                // Inside single quotes, do not process escape; output backslash and character.
                 output.push_back('\\');
                 output.push_back(c);
             } else {
-                // Outside any quotes: if c is a double quote, output two double quotes.
+                // Outside any quotes.
                 if (c == '"') {
-                    output.push_back('"');
-                    output.push_back('"');
+                    // If output already ends with a double quote, output only one more.
+                    if (!output.empty() && output.back() == '"')
+                        output.push_back('"');
+                    else {
+                        output.push_back('"');
+                        output.push_back('"');
+                    }
                 } else {
                     output.push_back(c);
                 }
@@ -162,17 +164,14 @@ int main() {
         if (input == "exit 0")
             break;
         
-        // If the command is echo, process it specially.
         size_t pos = input.find(' ');
         std::string command = (pos == std::string::npos) ? input : input.substr(0, pos);
-        
         if (command == "echo") {
-            
             std::string echoArg = (pos == std::string::npos) ? "" : input.substr(pos + 1);
             std::string result = processEcho(echoArg);
             std::cout << result << std::endl;
         } else {
-            
+            // For other commands, use the normal split.
             std::vector<std::string> args = split(input, ' ');
             if (args.empty())
                 continue;
@@ -256,6 +255,5 @@ int main() {
             }
         }
     }
-    
     return 0;
 }
