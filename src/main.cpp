@@ -93,53 +93,51 @@ std::string processEcho(const std::vector<std::string>& args) {
         for (size_t j = 0; j < currentPart.size(); j++) {
             char c = currentPart[j];
 
-            // Handle quotes
+            // Handle quote switching
             if (c == '"' && !inSingle) {
-                inDouble = !inDouble;
+                inDouble = !inDouble; // Toggle double quotes state
                 continue;
             }
             if (c == '\'' && !inDouble) {
-                inSingle = !inSingle;
+                inSingle = !inSingle; // Toggle single quotes state
                 continue;
             }
 
-            // Handle escape sequences
-            if (c == '\\' && j + 1 < currentPart.size()) {
-                char nextChar = currentPart[j + 1];
-
-                // If inside quotes, handle escaping of quotes and backslashes
-                if (inDouble || inSingle) {
-                    // Escape double quotes inside double quotes
-                    if (nextChar == '"' && inDouble) {
-                        output.push_back(nextChar);
-                        j++; // Skip the next character
-                    } 
-                    // Escape single quotes inside single quotes
-                    else if (nextChar == '\'' && inSingle) {
-                        output.push_back(nextChar);
-                        j++; // Skip the next character
+            // Handle backslashes
+            if (c == '\\') {
+                if (inDouble) {
+                    // Escape sequence handling inside double quotes
+                    if (j + 1 < currentPart.size()) {
+                        char nextChar = currentPart[j + 1];
+                        // Handle escaping of backslashes and quotes inside double quotes
+                        if (nextChar == '\\' || nextChar == '"') {
+                            output.push_back(nextChar);
+                            j++; // Skip next character
+                        } else {
+                            output.push_back('\\');
+                        }
+                    } else {
+                        output.push_back('\\');
                     }
-                    // Escape backslashes inside quotes
-                    else if (nextChar == '\\') {
-                        output.push_back(nextChar);
-                        j++; // Skip the next character
-                    } 
-                    else {
-                        output.push_back(c); // Add the backslash and move to next char
-                    }
+                } else if (inSingle) {
+                    // Inside single quotes, just add the backslash
+                    output.push_back('\\');
                 } else {
-                    output.push_back(c); // Treat backslash normally when not in quotes
+                    // Outside any quotes, treat backslash normally
+                    output.push_back(c);
                 }
             } else {
-                output.push_back(c); // Add regular character
+                // Add normal characters to output
+                output.push_back(c);
             }
         }
 
-        // Add space between parts (but not at the end of the string)
+        // Add space between arguments except after the last argument
         if (i < args.size() - 1) {
             output.push_back(' ');
         }
     }
+
     return output;
 }
 
