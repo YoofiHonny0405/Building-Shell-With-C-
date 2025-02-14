@@ -145,11 +145,6 @@ int main() {
         if (input == "exit 0") break;
         size_t pos = input.find(' ');
         std::string command = (pos == std::string::npos) ? input : input.substr(0, pos);
-        if (command == "echo") {
-            std::string echoArg = (pos == std::string::npos) ? "" : input.substr(pos + 1);
-            std::string result = processEcho(echoArg);
-            std::cout << result << std::endl;
-        } else {
             std::vector<std::string> args = split(input, ' ');
             if (args.empty()) continue;
             command = args[0];
@@ -188,7 +183,8 @@ int main() {
                 }
                 std::string result = processEcho(echoArg);
                 std::cout << result << std::endl;
-            }else {
+            }         
+            else {
                 pid_t pid = fork();
                 if (pid == -1) { std::cerr << "Failed to fork process" << std::endl; }
                 else if (pid == 0) {
@@ -198,7 +194,7 @@ int main() {
                     if (execvp(execArgs[0], execArgs.data()) == -1) { std::cerr << command << ": command not found" << std::endl; exit(EXIT_FAILURE); }
                 } else { int status; waitpid(pid, &status, 0); }
             }
-        }
+        
     }
     return 0;
 }
