@@ -92,16 +92,12 @@ std::string processEcho(const std::string& s) {
         if (escaped) {
             currentPart.push_back(c);
             escaped = false;
-        } else if (c == '\\' && !inSingle) {
+        } else if (c == '\\') {
             escaped = true;
-        } else if (c == '\\' && inSingle) {
-            currentPart.push_back(c);
         } else if (c == '"' && !inSingle) {
             inDouble = !inDouble;
-            currentPart.push_back(c);
         } else if (c == '\'' && !inDouble) {
             inSingle = !inSingle;
-            currentPart.push_back(c);
         } else if (c == ' ' && !inSingle && !inDouble) {
             if (!currentPart.empty()) {
                 if (!output.empty()) output += " ";
