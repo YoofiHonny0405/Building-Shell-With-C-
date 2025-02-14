@@ -85,54 +85,41 @@ std::string findExecutable(const std::string& command) {
 
 std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
-    bool inDouble = false, inSingle = false;
 
-    // Loop through all arguments passed to echo
-    for (size_t i = 1; i < args.size(); i++) {
-        std::string currentPart = args[i];
+    for (size_t i = 0; i < args.size(); ++i) {
+       std::string currentPart = args[i];
+        bool inSingle = false;
+        bool inDouble = false;
+         std::string token = currentPart;
 
-        for (size_t j = 0; j < currentPart.size(); j++) {
-            char c = currentPart[j];
-
-            // Handle single and double quotes
-            if (c == '"' && !inSingle) {
-                inDouble = !inDouble;
-                continue;
-            }
-            if (c == '\'' && !inDouble) {
-                inSingle = !inSingle;
-                continue;
-            }
-
-            // Handle escape sequences: \ followed by a character
-            if (c == '\\' && j + 1 < currentPart.size()) {
-                char nextChar = currentPart[j + 1];
-
-                // Handle common escape sequences
-                if (nextChar == '\\' || nextChar == '\'' || nextChar == '\"') {
-                    output.push_back(nextChar); // output escaped character
-                    j++; // Skip the next character as it's part of the escape sequence
-                } else {
-                    // If not a known escape sequence, output the backslash itself
-                    output.push_back(c);
+            // Process special characters depending on whether they are single or double quoted or not
+            for (int i = 0; i < token.length(); i++) {
+                if (token[i] == '\\' && i + 1 < token.length()) {
+                    char nextChar = token[i + 1];
+                    if (nextChar == '\\' || nextChar == '\'' || nextChar == '"') {
+                        output += nextChar;
+                        i++; // Skip the next character
+                    } else {
+                      output += token[i];
+                    }
                 }
-                continue; // Move to the next character
+                 else if (token[i] == '"') {
+                // Toggle double quote status
+                    inDouble = !inDouble;
+                    continue;
+                } else if (token[i] == '\'') {
+                // Toggle single quote status
+                    inSingle = !inSingle;
+                    continue;
+                }
+                else {
+                // Regular character, just add to output
+                  output += token[i];
+                }
             }
-
-            // Regular character, add to output
-            output.push_back(c);
-        }
-
-        // Add space between arguments (except for the last argument)
-        if (i < args.size() - 1) {
-            output.push_back(' ');
-        }
     }
-
     return output;
 }
-
-
 
 int main() {
     std::cout << std::unitbuf;
