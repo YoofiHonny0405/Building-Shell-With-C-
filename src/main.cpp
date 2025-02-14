@@ -83,33 +83,55 @@ std::string findExecutable(const std::string& command) {
     return "";
 }
 
-std::string processEcho(const std::string& s) {
+std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
     bool inDouble = false, inSingle = false;
-    std::string currentPart;
     
-    for (size_t i = 0; i < s.size(); i++) {
-        char c = s[i];
+    for (size_t i = 1; i < args.size(); i++) {
+        std::string currentPart = args[i];
         
-        if (c == '\'' && !inDouble) {
-            inSingle = !inSingle;
-            currentPart.push_back(c); // Preserve the single quote
-        } else if (c == '"' && !inSingle) {
-            inDouble = !inDouble;
-            currentPart.push_back(c); // Preserve the double quote
-        } else if (inSingle) {
-            currentPart.push_back(c); // Preserve everything inside single quotes
-        } else if (c == '\\' && i + 1 < s.size()) {
-            currentPart.push_back(c); // Preserve the backslash
-            currentPart.push_back(s[++i]); // Preserve the next character
-        } else {
-            currentPart.push_back(c);
+        for (size_t j = 0; j < currentPart.size(); j++) {
+            char c = currentPart[j];
+            
+            if (c == '"' && !inSingle) {
+                inDouble = !inDouble;
+                continue;
+            }
+            if (c == '\'' && !inDouble) {
+                inSingle = !inSingle;
+                continue;
+            }
+            
+            if (inSingle) {
+                output.push_back(c);
+            } else if (inDouble) {
+                if (c == '\\' && j + 1 < currentPart.size()) {
+                    char nextChar = currentPart[j + 1];
+                    if (nextChar == '\\' || nextChar == '"') {
+                        output.push_back(nextChar);
+                        j++;
+                    } else {
+                        output.push_back(c);
+                    }
+                } else {
+                    output.push_back(c);
+                }
+            } else {
+                if (c == '\\' && j + 1 < currentPart.size()) {
+                    output.push_back(currentPart[++j]);
+                } else {
+                    output.push_back(c);
+                }
+            }
+        }
+        
+        if (i < args.size() - 1) {
+            output.push_back(' ');
         }
     }
-    
-    output += currentPart;
     return output;
 }
+
 
 
 int main() {
