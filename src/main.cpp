@@ -23,49 +23,42 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     std::string token;
     bool inSingleQuotes = false;
     bool inDoubleQuotes = false;
-    
+
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
+
+        // Preserve backslashes and the next character as-is
         if (c == '\\' && i + 1 < str.size()) {
-            char nextChar = str[i+1];
-            if (!inSingleQuotes && !inDoubleQuotes) {
-                token.push_back(nextChar);
-                i++; // Consume the next character.
-            } else if (inDoubleQuotes) {
-                if (nextChar == '\\' || nextChar == '$' || nextChar == '"' || nextChar == '\n') {
-                    token.push_back(nextChar);
-                    i++;
-                } else {
-                    token.push_back('\\');
-                    token.push_back(nextChar);
-                    i++;
-                }
-            } else { // in single quotes: preserve literally.
-                token.push_back('\\');
-                token.push_back(nextChar);
-                i++;
-            }
+            token.push_back(c); 
+            token.push_back(str[++i]);
         }
+        // Toggle single quotes, but preserve them
         else if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
-            token.push_back(c); // Preserve for later processing.
+            token.push_back(c);
         }
+        // Toggle double quotes, but preserve them
         else if (c == '"' && !inSingleQuotes) {
             inDoubleQuotes = !inDoubleQuotes;
-            token.push_back(c); // Preserve for later processing.
+            token.push_back(c);
         }
+        // Split by delimiter if outside quotes
         else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
             if (!token.empty()) {
                 tokens.push_back(token);
                 token.clear();
             }
         }
+        // Add character to token
         else {
             token.push_back(c);
         }
     }
-    if (!token.empty())
+
+    if (!token.empty()) {
         tokens.push_back(token);
+    }
+
     return tokens;
 }
 
@@ -232,7 +225,15 @@ int main() {
                 }
                 if (chdir(targetDir.c_str()) != 0)
                     std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
+            } else if (command == "echo") {
+                std::string output;
+                for (size_t i = 1; i < args.size(); i++) {
+                    if (i > 1) output += " ";
+                    output += args[i];
+                }
+                std::cout << output << std::endl;
             }
+            
             else {
                 pid_t pid = fork();
                 if (pid == -1) {
