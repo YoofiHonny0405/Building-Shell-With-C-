@@ -68,27 +68,24 @@ std::string unescapePath(const std::string& path) {
 
 std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
-    for (size_t i = 1; i < args.size(); ++i) {  // Start from 1 to skip the "echo" command
+    for (size_t i = 1; i < args.size(); ++i) {
         if (i > 1) output += " ";
         std::string arg = args[i];
         bool inDoubleQuotes = false;
 
         for (size_t j = 0; j < arg.size(); ++j) {
             if (arg[j] == '"' && (j == 0 || j == arg.size() - 1)) {
-                // Skip outermost double quotes
-                continue;
+                continue; // Skip outermost double quotes
             }
             if (arg[j] == '"') {
                 inDoubleQuotes = !inDoubleQuotes;
-                output += arg[j];
             } else if (arg[j] == '\\' && j + 1 < arg.size()) {
                 char next = arg[j + 1];
-                if (next == '\\' || next == '"' || (next == '\'' && !inDoubleQuotes)) {
-                    output += next;
-                    ++j;
-                } else {
-                    output += arg[j];
+                if (next == '\\' || next == '"' || (next == '\'' && inDoubleQuotes)) {
+                    output += '\\'; // Preserve backslash for escaped characters
                 }
+                output += next;
+                ++j;
             } else {
                 output += arg[j];
             }
