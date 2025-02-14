@@ -69,7 +69,6 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     return tokens;
 }
 
-
 std::string unescapePath(const std::string& path) {
     std::string result;
     bool inSingleQuotes = false;
@@ -111,6 +110,7 @@ std::string processEcho(const std::string& s) {
     
     for (size_t i = 0; i < s.size(); i++) {
         char c = s[i];
+        
         if (escaped) {
             if (inDouble) {
                 if (c == '\\' || c == '$' || c == '"' || c == '\n') {
@@ -123,15 +123,13 @@ std::string processEcho(const std::string& s) {
                 output.push_back('\\');
                 output.push_back(c);
             } else {
-                // Outside any quotes.
+                // Outside any quotes: if c is a double quote,
+                // if this is the last character, output two; otherwise output one.
                 if (c == '"') {
-                    // If output already ends with a double quote, output only one more.
-                    if (!output.empty() && output.back() == '"')
+                    if (i == s.size() - 1)
+                        output.append("\"\"");
+                    else
                         output.push_back('"');
-                    else {
-                        output.push_back('"');
-                        output.push_back('"');
-                    }
                 } else {
                     output.push_back(c);
                 }
@@ -149,6 +147,11 @@ std::string processEcho(const std::string& s) {
     }
     if (escaped)
         output.push_back('\\');
+    
+    // If output ends with three double quotes, remove one.
+    if (output.size() >= 3 && output.substr(output.size()-3) == "\"\"\"")
+        output.erase(output.size()-1);
+    
     return output;
 }
 
@@ -164,14 +167,16 @@ int main() {
         if (input == "exit 0")
             break;
         
+        // Special handling for echo: take the entire substring after the first space.
         size_t pos = input.find(' ');
         std::string command = (pos == std::string::npos) ? input : input.substr(0, pos);
+        
         if (command == "echo") {
             std::string echoArg = (pos == std::string::npos) ? "" : input.substr(pos + 1);
             std::string result = processEcho(echoArg);
             std::cout << result << std::endl;
         } else {
-            // For other commands, use the normal split.
+            // For other commands, use the standard split.
             std::vector<std::string> args = split(input, ' ');
             if (args.empty())
                 continue;
@@ -255,5 +260,6 @@ int main() {
             }
         }
     }
+    
     return 0;
 }
