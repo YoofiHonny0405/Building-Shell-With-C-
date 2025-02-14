@@ -181,7 +181,14 @@ int main() {
                 std::string targetDir = args[1];
                 if (targetDir == "~") { const char* homeDir = std::getenv("HOME"); if (!homeDir) { std::cerr << "cd: HOME not set" << std::endl; continue; } targetDir = homeDir; }
                 if (chdir(targetDir.c_str()) != 0) std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
-            } else {
+            }else if (command == "echo") {
+                std::vector<std::string> echoArg;
+                for (size_t i = 1; i < args.size(); i++) {
+                    echoArg.push_back(args[i]);
+                }
+                std::string result = processEcho(echoArg);
+                std::cout << result << std::endl;
+            }else {
                 pid_t pid = fork();
                 if (pid == -1) { std::cerr << "Failed to fork process" << std::endl; }
                 else if (pid == 0) {
