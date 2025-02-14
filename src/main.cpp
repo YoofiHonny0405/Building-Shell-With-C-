@@ -85,33 +85,29 @@ std::string findExecutable(const std::string& command) {
 
 std::string processEcho(const std::string& s) {
     std::string output;
-    bool inDouble = false, inSingle = false, escaped = false;
+    bool inDouble = false, inSingle = false;
     std::string currentPart;
+    
     for (size_t i = 0; i < s.size(); i++) {
         char c = s[i];
-        if (escaped) {
-            currentPart.push_back(c);
-            escaped = false;
-        } else if (c == '\\') {
-            escaped = true;
+        
+        if (c == '\'' && !inDouble) {
+            inSingle = !inSingle;
+            currentPart.push_back(c); // Preserve the single quote
         } else if (c == '"' && !inSingle) {
             inDouble = !inDouble;
-        } else if (c == '\'' && !inDouble) {
-            inSingle = !inSingle;
-        } else if (c == ' ' && !inSingle && !inDouble) {
-            if (!currentPart.empty()) {
-                if (!output.empty()) output += " ";
-                output += currentPart;
-                currentPart.clear();
-            }
+            currentPart.push_back(c); // Preserve the double quote
+        } else if (inSingle) {
+            currentPart.push_back(c); // Preserve everything inside single quotes
+        } else if (c == '\\' && i + 1 < s.size()) {
+            currentPart.push_back(c); // Preserve the backslash
+            currentPart.push_back(s[++i]); // Preserve the next character
         } else {
             currentPart.push_back(c);
         }
     }
-    if (!currentPart.empty()) {
-        if (!output.empty()) output += " ";
-        output += currentPart;
-    }
+    
+    output += currentPart;
     return output;
 }
 
