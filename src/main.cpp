@@ -73,7 +73,7 @@ std::string processEcho(const std::vector<std::string>& args) {
     for (size_t i = 1; i < args.size(); i++) {
         std::string currentPart = args[i];
 
-        // Check and remove surrounding double quotes from the entire argument
+        // If the argument starts and ends with double quotes, remove them
         if (currentPart.size() > 1 && currentPart.front() == '"' && currentPart.back() == '"') {
             currentPart = currentPart.substr(1, currentPart.size() - 2);
         }
@@ -92,23 +92,29 @@ std::string processEcho(const std::vector<std::string>& args) {
                 continue;
             }
 
-            // Handle escaped double quotes
+            // Handle escaped characters inside double quotes
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
-                // If it's an escaped double quote, preserve it as a regular double quote
-                if (nextChar == '"') {
+                // Escaped single quote -> keep it as \' inside double quotes
+                if (nextChar == '\'' && inDouble) {
+                    output.push_back('\\');
+                    output.push_back('\'');
+                    j++;  // Skip the escaped character
+                    continue;
+                }
+                // Escaped double quote -> make it regular double quote
+                if (nextChar == '"' && inDouble) {
                     output.push_back('"');
                     j++;  // Skip the escaped character
                     continue;
-                } else {
-                    // Keep the backslash if it's not escaping a double quote
-                    output.push_back(c);
                 }
+                // Keep the backslash if it's not escaping a special character
+                output.push_back(c);
+            } else {
+                // Regular character, add to output
+                output.push_back(c);
             }
-
-            // Regular character, add to output
-            output.push_back(c);
         }
 
         // Add space between arguments (except for the last argument)
