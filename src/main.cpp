@@ -92,14 +92,21 @@ std::string processEcho(const std::vector<std::string>& args) {
 
                 // Case for \ followed by ' inside double quotes
                 if (inDouble && nextChar == '\'') {
-                    output.push_back('\\');  // Preserve the backslash
-                    output.push_back('\'');  // Output the single quote
-                    j++;  // Skip the next character (the single quote)
+                    output.push_back('\\');
+                    output.push_back('\'');
+                    j++;
+                    continue;
+                }
+
+                // Case for \ followed by " inside double quotes
+                if (inDouble && nextChar == '"') {
+                    output.push_back('"');  // Preserve the double quote
+                    j++;
                     continue;
                 }
 
                 // Handle common escape sequences
-                if (nextChar == '\\' || nextChar == '"' || nextChar == '$' || nextChar == '`') {
+                if (nextChar == '\\' || nextChar == '$' || nextChar == '`') {
                     output.push_back(nextChar);
                     j++;
                 } else {
