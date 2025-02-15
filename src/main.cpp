@@ -79,10 +79,12 @@ std::string processEcho(const std::vector<std::string>& args) {
             // Handle single and double quotes
             if (c == '"' && !inSingle) {
                 inDouble = !inDouble;
+                output.push_back(c);  // Keep the double quote
                 continue;
             }
             if (c == '\'' && !inDouble) {
                 inSingle = !inSingle;
+                output.push_back(c);  // Keep the single quote
                 continue;
             }
 
@@ -90,29 +92,15 @@ std::string processEcho(const std::vector<std::string>& args) {
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
-                // Case for \ followed by ' inside double quotes
-                if (inDouble && nextChar == '\'') {
-                    output.push_back('\\');
-                    output.push_back('\'');
-                    j++;
-                    continue;
-                }
-
-                // Case for \ followed by " inside double quotes
-                if (inDouble && nextChar == '"') {
-                    output.push_back('"');  // Preserve the double quote
-                    j++;
-                    continue;
-                }
-
-                // Handle common escape sequences
-                if (nextChar == '\\' || nextChar == '$' || nextChar == '`') {
+                // If inside double quotes, skip the backslash but keep the next character
+                if (inDouble) {
                     output.push_back(nextChar);
-                    j++;
-                } else {
-                    // Preserve the backslash if not a known escape sequence
-                    output.push_back(c);
+                    j++;  // Skip the next character as it's already added
+                    continue;
                 }
+
+                // For other cases, keep the backslash as-is
+                output.push_back(c);
                 continue;
             }
 
