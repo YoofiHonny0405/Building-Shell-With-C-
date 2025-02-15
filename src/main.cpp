@@ -88,20 +88,15 @@ std::string processEcho(const std::vector<std::string>& args) {
                 continue;
             }
 
-            // Handle backslashes
+            // Handle backslashes inside double quotes
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
-                // If inside double quotes, skip the backslash but keep the next character
-                if (inDouble) {
-                    output.push_back(nextChar);
-                    j++;  // Skip the next character as it's already added
+                if (inDouble && (nextChar == '"')) {
+                    output.push_back('"');  // Keep the double quote but discard \
+                    j++;  // Skip the backslash
                     continue;
                 }
-
-                // For other cases, keep the backslash as-is
-                output.push_back(c);
-                continue;
             }
 
             // Regular character, add to output
