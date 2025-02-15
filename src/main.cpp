@@ -69,7 +69,6 @@ std::string unescapePath(const std::string& path) {
 std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
     bool inDouble = false, inSingle = false;
-    bool wrapInQuotes = false;
 
     for (size_t i = 1; i < args.size(); i++) {
         std::string currentPart = args[i];
@@ -80,16 +79,14 @@ std::string processEcho(const std::vector<std::string>& args) {
             // Handle double quotes
             if (c == '"' && !inSingle) {
                 inDouble = !inDouble;
-                if (j == 0 || j == currentPart.size() - 1) {
-                    wrapInQuotes = true;  // Track if the whole argument is in quotes
-                }
+                output.push_back(c);  // Keep the double quote as it is
                 continue;
             }
 
             // Handle single quotes
             if (c == '\'' && !inDouble) {
                 inSingle = !inSingle;
-                output.push_back(c);  // Keep the single quote
+                output.push_back(c);  // Keep the single quote as it is
                 continue;
             }
 
@@ -97,16 +94,13 @@ std::string processEcho(const std::vector<std::string>& args) {
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
-                if (inDouble && nextChar == '"') {
-                    output.push_back('"');  // Keep the double quote, discard the backslash
-                    j++;
-                    continue;
-                } else if (inDouble && nextChar == '\'') {
-                    output.push_back('\\');  // Preserve the backslash before single quote
-                    output.push_back('\'');
+                if (inDouble && (nextChar == '"' || nextChar == '\\' || nextChar == '\'')) {
+                    output.push_back('\\');  // Preserve the backslash
+                    output.push_back(nextChar);
                     j++;
                     continue;
                 }
+                // If not a special case, just add the character as-is
             }
 
             // Regular character, add to output
@@ -117,11 +111,6 @@ std::string processEcho(const std::vector<std::string>& args) {
         if (i < args.size() - 1) {
             output.push_back(' ');
         }
-    }
-
-    // If input was wrapped in double quotes, wrap the output too
-    if (wrapInQuotes) {
-        output = '"' + output + '"';
     }
 
     return output;
