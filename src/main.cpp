@@ -73,20 +73,22 @@ std::string processEcho(const std::vector<std::string>& args) {
     for (size_t i = 1; i < args.size(); i++) {
         std::string currentPart = args[i];
 
+        // Check and remove surrounding double quotes from the entire argument
+        if (currentPart.size() > 1 && currentPart.front() == '"' && currentPart.back() == '"') {
+            currentPart = currentPart.substr(1, currentPart.size() - 2);
+        }
+
         for (size_t j = 0; j < currentPart.size(); j++) {
             char c = currentPart[j];
 
-            // Handle double quotes
+            // Toggle state for quotes
             if (c == '"' && !inSingle) {
                 inDouble = !inDouble;
-                output.push_back(c);  // Keep the double quote as it is
                 continue;
             }
-
-            // Handle single quotes
             if (c == '\'' && !inDouble) {
                 inSingle = !inSingle;
-                output.push_back(c);  // Keep the single quote as it is
+                output.push_back(c);
                 continue;
             }
 
@@ -100,7 +102,6 @@ std::string processEcho(const std::vector<std::string>& args) {
                     j++;
                     continue;
                 }
-                // If not a special case, just add the character as-is
             }
 
             // Regular character, add to output
