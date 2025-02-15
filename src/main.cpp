@@ -68,31 +68,53 @@ std::string unescapePath(const std::string& path) {
 
 std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
-    for (size_t i = 1; i < args.size(); ++i) {
-        if (i > 1) output += " ";
-        std::string arg = args[i];
-        bool inDoubleQuotes = false;
+    bool inDouble = false, inSingle = false;
 
-        for (size_t j = 0; j < arg.size(); ++j) {
-            if (arg[j] == '"' && (j == 0 || j == arg.size() - 1)) {
-                continue; // Skip outermost double quotes
+    // Loop through all arguments passed to echo
+    for (size_t i = 1; i < args.size(); i++) {
+        std::string currentPart = args[i];
+
+        for (size_t j = 0; j < currentPart.size(); j++) {
+            char c = currentPart[j];
+
+            // Handle single and double quotes
+            if (c == '"' && !inSingle) {
+                inDouble = !inDouble;
+                continue;
             }
-            if (arg[j] == '"') {
-                inDoubleQuotes = !inDoubleQuotes;
-            } else if (arg[j] == '\\' && j + 1 < arg.size()) {
-                char next = arg[j + 1];
-                if (next == '\\' || next == '"' || (next == '\'' && inDoubleQuotes)) {
-                    output += '\\'; // Preserve backslash for escaped characters
+            if (c == '\'' && !inDouble) {
+                inSingle = !inSingle;
+                continue;
+            }
+
+            // Handle escape sequences: \ followed by a character
+            if (c == '\\' && j + 1 < currentPart.size()) {
+                char nextChar = currentPart[j + 1];
+
+                // Handle common escape sequences
+                if (nextChar == '\\' || nextChar == '\'' || nextChar == '\"') {
+                    output.push_back(nextChar); // output escaped character
+                    j++; // Skip the next character as it's part of the escape sequence
+                } else {
+                    // If not a known escape sequence, output the backslash itself
+                    output.push_back(c);
                 }
-                output += next;
-                ++j;
-            } else {
-                output += arg[j];
+                continue; // Move to the next character
             }
+
+            // Regular character, add to output
+            output.push_back(c);
+        }
+
+        // Add space between arguments (except for the last argument)
+        if (i < args.size() - 1) {
+            output.push_back(' ');
         }
     }
+
     return output;
 }
+
 
 
 std::string findExecutable(const std::string& command) {
