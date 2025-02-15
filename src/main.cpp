@@ -92,15 +92,18 @@ std::string processEcho(const std::vector<std::string>& args) {
                 continue;
             }
 
-            // Handle backslashes within double quotes
+            // Handle escaped double quotes
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
-                if (inDouble && (nextChar == '"' || nextChar == '\\' || nextChar == '\'')) {
-                    output.push_back('\\');  // Preserve the backslash
-                    output.push_back(nextChar);
-                    j++;
+                // If it's an escaped double quote, preserve it as a regular double quote
+                if (nextChar == '"') {
+                    output.push_back('"');
+                    j++;  // Skip the escaped character
                     continue;
+                } else {
+                    // Keep the backslash if it's not escaping a double quote
+                    output.push_back(c);
                 }
             }
 
