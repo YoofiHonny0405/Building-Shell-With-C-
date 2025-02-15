@@ -70,7 +70,6 @@ std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
     bool inDouble = false, inSingle = false;
 
-    // Loop through all arguments passed to echo
     for (size_t i = 1; i < args.size(); i++) {
         std::string currentPart = args[i];
 
@@ -87,19 +86,27 @@ std::string processEcho(const std::vector<std::string>& args) {
                 continue;
             }
 
-            // Handle escape sequences: \ followed by a character
+            // Handle backslashes
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
+                // Case for \ followed by ' inside double quotes
+                if (inDouble && nextChar == '\'') {
+                    output.push_back('\\');  // Preserve the backslash
+                    output.push_back('\'');  // Output the single quote
+                    j++;  // Skip the next character (the single quote)
+                    continue;
+                }
+
                 // Handle common escape sequences
-                if (nextChar == '\\' || nextChar == '\'' || nextChar == '\"') {
-                    output.push_back(nextChar); // output escaped character
-                    j++; // Skip the next character as it's part of the escape sequence
+                if (nextChar == '\\' || nextChar == '"' || nextChar == '$' || nextChar == '`') {
+                    output.push_back(nextChar);
+                    j++;
                 } else {
-                    // If not a known escape sequence, output the backslash itself
+                    // Preserve the backslash if not a known escape sequence
                     output.push_back(c);
                 }
-                continue; // Move to the next character
+                continue;
             }
 
             // Regular character, add to output
