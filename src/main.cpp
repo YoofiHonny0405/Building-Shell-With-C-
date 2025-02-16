@@ -60,8 +60,6 @@ std::string findExecutable(const std::string &command) {
 }
 
 std::string processEchoLine(const std::string &line) {
-    if (line.size() >= 2 && line.front()=='\'' && line.back()=='\'')
-        return line.substr(1, line.size()-2);
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
     for (size_t i = 0; i < line.size(); i++) {
@@ -78,13 +76,26 @@ std::string processEchoLine(const std::string &line) {
             continue;
         }
         if (c=='\\') { escaped = true; continue; }
-        if (c=='"' && !inSingle) { inDouble = !inDouble; continue; }
-        if (c=='\'' && !inDouble) { inSingle = !inSingle; continue; }
+        if (c=='"' && !inSingle) {
+            inDouble = !inDouble;
+            continue;
+        }
+        if (c=='\'' && !inDouble) {
+            inSingle = !inSingle;
+            continue;
+        }
         out.push_back(c);
     }
     if (escaped) out.push_back('\\');
+
+    // Remove extra spaces between concatenated strings
+    size_t len = out.length();
+    if (len > 1 && out[len-1] == ' ' && out[len-2] != ' ')
+        out.erase(len-1);
+
     return out;
 }
+
 
 int main(){
     std::cout << std::unitbuf;
