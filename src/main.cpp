@@ -115,29 +115,33 @@ std::string processEcho(const std::vector<std::string>& args) {
                 continue;
             }
 
-            // Handle escaped characters inside double quotes
+            // Handle escaped characters inside single or double quotes
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
-                // Escaped single quote -> keep it as \' inside double quotes
-                if (nextChar == '\'' && inDouble) {
-                    output.push_back('\\');
-                    output.push_back('\'');
+                // If we encounter an escaped single quote inside single quotes
+                if (nextChar == '\'' && inSingle) {
+                    output.push_back(nextChar);
                     j++;  // Skip the escaped character
                     continue;
                 }
-                // Escaped double quote -> make it regular double quote
+
+                // If we encounter an escaped double quote inside double quotes
                 if (nextChar == '"' && inDouble) {
-                    output.push_back('"');
+                    output.push_back(nextChar);
                     j++;  // Skip the escaped character
                     continue;
                 }
-                // Keep the backslash if it's not escaping a special character
-                output.push_back(c);
-            } else {
-                // Regular character, add to output
-                output.push_back(c);
+
+                // If it's just a backslash, keep it as-is
+                if (nextChar == '\\') {
+                    output.push_back(c);
+                    continue;
+                }
             }
+
+            // Regular character, add to output
+            output.push_back(c);
         }
 
         // Add space between arguments (except for the last argument)
