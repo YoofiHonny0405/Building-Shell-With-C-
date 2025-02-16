@@ -60,65 +60,31 @@ std::string findExecutable(const std::string &command) {
 }
 
 std::string processEchoLine(const std::string &line) {
-    std::string result;
-    std::string current;
+    if (line.size() >= 2 && line.front()=='\'' && line.back()=='\'')
+        return line.substr(1, line.size()-2);
+    std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
-    std::vector<std::string> parts;
-    
-    for (size_t i = 0; i < line.size(); ++i) {
+    for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
-        
-        // Handle escaping
         if (escaped) {
-            current.push_back(c);
+            if (inDouble) {
+                if (c=='"' || c=='\\' || c=='$' || c=='\n')
+                    out.push_back(c);
+                else { out.push_back('\\'); out.push_back(c); }
+            } else {
+                out.push_back(c);
+            }
             escaped = false;
             continue;
         }
-        
-        // Handle backslashes
-        if (c == '\\') {
-            escaped = true;
-            continue;
-        }
-        
-        // Toggle double quotes
-        if (c == '"' && !inSingle) {
-            inDouble = !inDouble;
-            continue;
-        }
-        
-        // Toggle single quotes
-        if (c == '\'' && !inDouble) {
-            inSingle = !inSingle;
-            continue;
-        }
-        
-        // Split by spaces when not inside quotes
-        if (c == ' ' && !inDouble && !inSingle) {
-            if (!current.empty()) {
-                parts.push_back(current);
-                current.clear();
-            }
-            continue;
-        }
-        
-        // Add character to the current part
-        current.push_back(c);
+        if (c=='\\') { escaped = true; continue; }
+        if (c=='"' && !inSingle) { inDouble = !inDouble; continue; }
+        if (c=='\'' && !inDouble) { inSingle = !inSingle; continue; }
+        out.push_back(c);
     }
-    
-    // Push the last part
-    if (!current.empty()) {
-        parts.push_back(current);
-    }
-    
-    // Join all parts without spaces between them
-    for (const auto& part : parts) {
-        result += part;
-    }
-    
-    return result;
+    if (escaped) out.push_back('\\');
+    return out;
 }
-
 
 int main(){
     std::cout << std::unitbuf;
