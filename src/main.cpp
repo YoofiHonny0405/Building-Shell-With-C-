@@ -92,61 +92,56 @@ std::string unescapePath(const std::string& path) {
 std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
     bool inDouble = false, inSingle = false;
-    
+
     for (size_t i = 1; i < args.size(); i++) {
         std::string currentPart = args[i];
-        
+
         // If the argument starts and ends with double quotes, remove them
         if (currentPart.size() > 1 && currentPart.front() == '"' && currentPart.back() == '"') {
             currentPart = currentPart.substr(1, currentPart.size() - 2);
         }
-        
+
         for (size_t j = 0; j < currentPart.size(); j++) {
             char c = currentPart[j];
-            
-            // Toggle state for quotes
-            if (c == '"' && !inSingle) {
-                inDouble = !inDouble;
-                output.push_back(c);  // Keep the double quote
-                continue;
-            }
-            if (c == '\'' && !inDouble) {
-                inSingle = !inSingle;
-                output.push_back(c);  // Keep the single quote
-                continue;
-            }
 
             // Handle escape sequences
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
-                
-                // Handle escaped backslash
-                if (nextChar == '\\') {
-                    output.push_back('\\');
-                    j++;  // Skip the next character
+
+                // Remove escaped double quotes (\" -> "")
+                if (nextChar == '"') {
+                    j++;  // Skip the next character (escaped quote)
                     continue;
                 }
 
-                // Handle escaped single quote inside single quotes
+                // Handle escaped single quotes inside single quotes (\' -> ')
                 if (nextChar == '\'' && inSingle) {
                     output.push_back('\'');
-                    j++;  // Skip the next character
+                    j++;  // Skip the next character (escaped single quote)
                     continue;
                 }
 
-                // Handle escaped double quote inside double quotes
-                if (nextChar == '"' && inDouble) {
-                    // Skip the escaped double quote without adding it
-                    j++;  // Skip the next character
+                // Handle escaped backslash (\\ -> \)
+                if (nextChar == '\\') {
+                    output.push_back('\\');
+                    j++;  // Skip the next character (escaped backslash)
                     continue;
                 }
-
-                // Otherwise, just append the backslash without escape
-                output.push_back(c);
-            } else {
-                // Regular character, just add it
-                output.push_back(c);
             }
+
+            // Handle toggling of quotes
+            if (c == '"' && !inSingle) {
+                inDouble = !inDouble;  // Toggle double quotes
+                continue;
+            }
+            if (c == '\'' && !inDouble) {
+                inSingle = !inSingle;  // Toggle single quotes
+                output.push_back(c);  // Preserve the single quote
+                continue;
+            }
+
+            // Regular character, just add it
+            output.push_back(c);
         }
 
         // Add space between arguments (except for the last argument)
