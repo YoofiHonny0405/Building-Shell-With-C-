@@ -92,56 +92,61 @@ std::string unescapePath(const std::string& path) {
 std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
     bool inDouble = false, inSingle = false;
-
+    
     for (size_t i = 1; i < args.size(); i++) {
         std::string currentPart = args[i];
-
+        
         // If the argument starts and ends with double quotes, remove them
         if (currentPart.size() > 1 && currentPart.front() == '"' && currentPart.back() == '"') {
             currentPart = currentPart.substr(1, currentPart.size() - 2);
         }
-
+        
         for (size_t j = 0; j < currentPart.size(); j++) {
             char c = currentPart[j];
-
+            
             // Toggle state for quotes
             if (c == '"' && !inSingle) {
                 inDouble = !inDouble;
+                output.push_back(c);  // Keep the double quote
                 continue;
             }
             if (c == '\'' && !inDouble) {
                 inSingle = !inSingle;
-                output.push_back(c);
+                output.push_back(c);  // Keep the single quote
                 continue;
             }
 
-            // Handle escaped characters inside single or double quotes
+            // Handle escape sequences
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
-
-                // If we encounter an escaped single quote inside single quotes
-                if (nextChar == '\'' && inSingle) {
-                    output.push_back(nextChar);
-                    j++;  // Skip the escaped character
-                    continue;
-                }
-
-                // If we encounter an escaped double quote inside double quotes
-                if (nextChar == '"' && inDouble) {
-                    output.push_back(nextChar);
-                    j++;  // Skip the escaped character
-                    continue;
-                }
-
-                // If it's just a backslash, keep it as-is
+                
+                // Handle escaped backslash
                 if (nextChar == '\\') {
-                    output.push_back(c);
+                    output.push_back('\\');
+                    j++;  // Skip the next character
                     continue;
                 }
-            }
 
-            // Regular character, add to output
-            output.push_back(c);
+                // Handle escaped single quote inside single quotes
+                if (nextChar == '\'' && inSingle) {
+                    output.push_back('\'');
+                    j++;  // Skip the next character
+                    continue;
+                }
+
+                // Handle escaped double quote inside double quotes
+                if (nextChar == '"' && inDouble) {
+                    output.push_back('"');
+                    j++;  // Skip the next character
+                    continue;
+                }
+
+                // Otherwise, just append the backslash without escape
+                output.push_back(c);
+            } else {
+                // Regular character, just add it
+                output.push_back(c);
+            }
         }
 
         // Add space between arguments (except for the last argument)
