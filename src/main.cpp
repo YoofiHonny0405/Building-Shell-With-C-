@@ -91,8 +91,8 @@ std::string unescapePath(const std::string& path) {
 
 std::string processEcho(const std::vector<std::string>& args) {
     std::string output;
-    bool inDouble = false, inSingle = false;
-
+    bool inDoubleQuotes = false, inSingleQuotes = false;
+    
     for (size_t i = 1; i < args.size(); i++) {
         std::string currentPart = args[i];
 
@@ -104,37 +104,39 @@ std::string processEcho(const std::vector<std::string>& args) {
         for (size_t j = 0; j < currentPart.size(); j++) {
             char c = currentPart[j];
 
-            // Handle escape sequences for double quotes
+            // Handle escape sequences for special characters
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
                 // If the next character is a double quote, skip the backslash and include the quote
                 if (nextChar == '"') {
                     output.push_back('"');
-                    j++;  // Skip the next character (the double quote)
+                    j++;  // Skip the escaped quote
                     continue;
                 }
 
-                // If the next character is another backslash, keep one backslash
+                // If the next character is another backslash, just add one backslash
                 if (nextChar == '\\') {
                     output.push_back('\\');
-                    j++;  // Skip the next backslash
+                    j++;  // Skip the escaped backslash
                     continue;
                 }
             }
 
-            // Handle toggling of quotes
-            if (c == '"' && !inSingle) {
-                inDouble = !inDouble;  // Toggle double quotes
+            // Handle toggling of double quotes
+            if (c == '"' && !inSingleQuotes) {
+                inDoubleQuotes = !inDoubleQuotes;  // Toggle double quotes
                 continue;
             }
-            if (c == '\'' && !inDouble) {
-                inSingle = !inSingle;  // Toggle single quotes
+
+            // Handle toggling of single quotes
+            if (c == '\'' && !inDoubleQuotes) {
+                inSingleQuotes = !inSingleQuotes;  // Toggle single quotes
                 output.push_back(c);   // Preserve the single quote
                 continue;
             }
 
-            // Regular character, just add it to the output
+            // Add regular character to output
             output.push_back(c);
         }
 
