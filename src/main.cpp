@@ -136,7 +136,7 @@ std::string processEcho(const std::vector<std::string>& args) {
 
                 // Handle escaped double quote inside double quotes
                 if (nextChar == '"' && inDouble) {
-                    output.push_back('"');
+                    // Skip the escaped double quote without adding it
                     j++;  // Skip the next character
                     continue;
                 }
