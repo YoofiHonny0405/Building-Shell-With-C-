@@ -108,23 +108,17 @@ std::string processEcho(const std::vector<std::string>& args) {
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
-                // Remove escaped double quotes (\" -> "")
+                // Handle escaped double quotes (\" -> "")
                 if (nextChar == '"') {
-                    j++;  // Skip the escaped quote
+                    // Skip the escaped double quote and continue
+                    j++;  
                     continue;
                 }
 
-                // Handle escaped single quotes inside single quotes (\' -> ')
-                if (nextChar == '\'' && inSingle) {
-                    output.push_back('\'');
-                    j++;  // Skip the next character (escaped single quote)
-                    continue;
-                }
-
-                // Handle escaped backslash (\\ -> \)
+                // Handle escaped backslashes (\\ -> \)
                 if (nextChar == '\\') {
                     output.push_back('\\');
-                    j++;  // Skip the next character (escaped backslash)
+                    j++;  // Skip the next backslash
                     continue;
                 }
             }
@@ -136,7 +130,7 @@ std::string processEcho(const std::vector<std::string>& args) {
             }
             if (c == '\'' && !inDouble) {
                 inSingle = !inSingle;  // Toggle single quotes
-                output.push_back(c);  // Preserve the single quote
+                output.push_back(c);   // Preserve the single quote
                 continue;
             }
 
