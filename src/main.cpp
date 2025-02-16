@@ -17,32 +17,54 @@
 
 namespace fs = std::filesystem;
 
-// Corrected split function
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
     bool inSingleQuotes = false;
     bool inDoubleQuotes = false;
+    bool escapeNext = false;
 
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
 
-        if (c == '\\' && i + 1 < str.size()) {
-            // Handle backslash escapes
-            token += str[++i];  // Add the escaped character
-        } else if (c == '\'' && !inDoubleQuotes) {
+        // Handle escape sequences
+        if (escapeNext) {
+            token.push_back(c);
+            escapeNext = false;
+            continue;
+        }
+
+        if (c == '\\') {
+            escapeNext = true;
+            token.push_back(c);  // Keep the backslash
+            continue;
+        }
+
+        // Toggle single quotes, but preserve them
+        if (c == '\'' && !inDoubleQuotes) {
             inSingleQuotes = !inSingleQuotes;
-            token += c;
-        } else if (c == '"' && !inSingleQuotes) {
-            inDoubleQuotes = !inDoubleQuotes;
-            token += c;
-        } else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
+            token.push_back(c);
+        }
+        // Toggle double quotes but preserve only in pairs
+        else if (c == '"' && !inSingleQuotes) {
+            if (inDoubleQuotes) {
+                inDoubleQuotes = false;
+                token.push_back(c); // Closing quote
+            } else {
+                inDoubleQuotes = true;
+                token.push_back(c); // Opening quote
+            }
+        }
+        // Split by delimiter if outside quotes
+        else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
             if (!token.empty()) {
                 tokens.push_back(token);
                 token.clear();
             }
-        } else {
-            token += c;
+        }
+        // Add character to token
+        else {
+            token.push_back(c);
         }
     }
 
@@ -52,6 +74,7 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
 
     return tokens;
 }
+
 
 
 std::string unescapePath(const std::string& path) {
