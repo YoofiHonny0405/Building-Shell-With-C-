@@ -104,18 +104,18 @@ std::string processEcho(const std::vector<std::string>& args) {
         for (size_t j = 0; j < currentPart.size(); j++) {
             char c = currentPart[j];
 
-            // Handle escape sequences
+            // Handle escape sequences for double quotes
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
 
-                // Handle escaped double quotes (\" -> "")
+                // If the next character is a double quote, skip the backslash and include the quote
                 if (nextChar == '"') {
-                    // Skip the escaped double quote and continue
-                    j++;  
+                    output.push_back('"');
+                    j++;  // Skip the next character (the double quote)
                     continue;
                 }
 
-                // Handle escaped backslashes (\\ -> \)
+                // If the next character is another backslash, keep one backslash
                 if (nextChar == '\\') {
                     output.push_back('\\');
                     j++;  // Skip the next backslash
@@ -134,7 +134,7 @@ std::string processEcho(const std::vector<std::string>& args) {
                 continue;
             }
 
-            // Regular character, just add it
+            // Regular character, just add it to the output
             output.push_back(c);
         }
 
