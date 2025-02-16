@@ -110,7 +110,7 @@ std::string processEcho(const std::vector<std::string>& args) {
 
                 // Remove escaped double quotes (\" -> "")
                 if (nextChar == '"') {
-                    j++;  // Skip the next character (escaped quote)
+                    j++;  // Skip the escaped quote
                     continue;
                 }
 
