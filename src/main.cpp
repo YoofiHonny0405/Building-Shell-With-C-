@@ -21,8 +21,7 @@ namespace fs = std::filesystem;
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
-    bool inSingleQuotes = false, inDoubleQuotes = false;
-    bool escapeNext = false;
+    bool inSingleQuotes = false, inDoubleQuotes = false, escapeNext = false;
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
         if (escapeNext) {
@@ -30,22 +29,16 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
             escapeNext = false;
             continue;
         }
-        if (c == '\\') {
+        if (c == '\\' && i + 1 < str.size()) {
             escapeNext = true;
             token.push_back(c);
             continue;
         }
-        if (c == '\'' && !inDoubleQuotes) {
-            inSingleQuotes = !inSingleQuotes;
-            token.push_back(c);
-        } else if (c == '"' && !inSingleQuotes) {
-            inDoubleQuotes = !inDoubleQuotes;
-            token.push_back(c);
-        } else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
+        if (c == '\'' && !inDoubleQuotes) { inSingleQuotes = !inSingleQuotes; token.push_back(c); }
+        else if (c == '"' && !inSingleQuotes) { inDoubleQuotes = !inDoubleQuotes; token.push_back(c); }
+        else if (c == delimiter && !inSingleQuotes && !inDoubleQuotes) {
             if (!token.empty()) { tokens.push_back(token); token.clear(); }
-        } else {
-            token.push_back(c);
-        }
+        } else { token.push_back(c); }
     }
     if (!token.empty()) tokens.push_back(token);
     return tokens;
@@ -84,43 +77,21 @@ std::string processEcho(const std::vector<std::string>& args) {
             currentPart = currentPart.substr(1, currentPart.size() - 2);
         for (size_t j = 0; j < currentPart.size(); j++) {
             char c = currentPart[j];
-            if (c == '"' && !inSingle) {
-                inDouble = !inDouble;
-                continue;
-            }
-            if (c == '\'' && !inDouble) {
-                inSingle = !inSingle;
-                output.push_back(c);
-                continue;
-            }
+            if (c == '"' && !inSingle) { inDouble = !inDouble; continue; }
+            if (c == '\'' && !inDouble) { inSingle = !inSingle; output.push_back(c); continue; }
             if (c == '\\' && j + 1 < currentPart.size()) {
                 char nextChar = currentPart[j + 1];
-                if (inDouble && nextChar == '"') {
-                    output.push_back('"');
-                    j++;
-                    continue;
+                if (!inDouble && !inSingle && nextChar == '\'') { 
+                    output.push_back('\\'); 
+                    j++; 
+                    continue; 
                 }
-                if (inDouble && nextChar == '\\') {
-                    output.push_back('\\');
-                    j++;
-                    continue;
-                }
-                if (inSingle && nextChar == '\'') {
-                    output.push_back('\'');
-                    j++;
-                    continue;
-                }
-                output.push_back(c);
-                continue;
-            }
-            // If backslash is the last character, and we're in double quotes, skip it.
-            if (c == '\\' && j + 1 >= currentPart.size() && inDouble) {
-                continue;
+                if (inDouble && nextChar == '"') { output.push_back('"'); j++; continue; }
+                if (inDouble && nextChar == '\\') { output.push_back('\\'); j++; continue; }
             }
             output.push_back(c);
         }
-        if (i < args.size() - 1)
-            output.push_back(' ');
+        if (i < args.size() - 1) output.push_back(' ');
     }
     return output;
 }
@@ -140,15 +111,18 @@ int main() {
         if (command == "type") {
             if (args.size() < 2) { std::cout << "type: missing argument" << std::endl; continue; }
             std::string targetCommand = args[1];
-            if (builtins.count(targetCommand)) std::cout << targetCommand << " is a shell builtin" << std::endl;
+            if (builtins.count(targetCommand))
+                std::cout << targetCommand << " is a shell builtin" << std::endl;
             else {
                 std::string execPath = findExecutable(targetCommand);
-                if (!execPath.empty()) std::cout << targetCommand << " is " << execPath << std::endl;
+                if (!execPath.empty())
+                    std::cout << targetCommand << " is " << execPath << std::endl;
                 else std::cout << targetCommand << ": not found" << std::endl;
             }
         } else if (command == "pwd") {
             char currentDir[PATH_MAX];
-            if (getcwd(currentDir, sizeof(currentDir))) std::cout << currentDir << std::endl;
+            if (getcwd(currentDir, sizeof(currentDir)))
+                std::cout << currentDir << std::endl;
             else std::cerr << "Error getting current directory" << std::endl;
         } else if (command == "cat") {
             if (args.size() < 2) { std::cerr << "cat: missing file operand" << std::endl; continue; }
@@ -156,19 +130,14 @@ int main() {
                 std::string filePath = unescapePath(args[i]);
                 std::ifstream file(filePath);
                 if (!file) { std::cerr << "cat: " << args[i] << ": No such file or directory" << std::endl; continue; }
-                std::string content((std::istreambuf_iterator<char>(file)),
-                                    std::istreambuf_iterator<char>());
+                std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                 std::cout << content;
             }
             std::cout << std::flush;
         } else if (command == "cd") {
             if (args.size() < 2) { std::cerr << "cd: missing argument" << std::endl; continue; }
             std::string targetDir = args[1];
-            if (targetDir == "~") {
-                const char* homeDir = std::getenv("HOME");
-                if (!homeDir) { std::cerr << "cd: HOME not set" << std::endl; continue; }
-                targetDir = homeDir;
-            }
+            if (targetDir == "~") { const char* homeDir = std::getenv("HOME"); if (!homeDir) { std::cerr << "cd: HOME not set" << std::endl; continue; } targetDir = homeDir; }
             if (chdir(targetDir.c_str()) != 0)
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
         } else if (command == "echo") {
@@ -178,12 +147,10 @@ int main() {
             if (pid == -1) { std::cerr << "Failed to fork process" << std::endl; }
             else if (pid == 0) {
                 std::vector<char*> execArgs;
-                for (auto& arg : args) execArgs.push_back(const_cast<char*>(arg.c_str()));
+                for (auto& arg : args)
+                    execArgs.push_back(const_cast<char*>(arg.c_str()));
                 execArgs.push_back(nullptr);
-                if (execvp(execArgs[0], execArgs.data()) == -1) {
-                    std::cerr << command << ": command not found" << std::endl;
-                    exit(EXIT_FAILURE);
-                }
+                if (execvp(execArgs[0], execArgs.data()) == -1) { std::cerr << command << ": command not found" << std::endl; exit(EXIT_FAILURE); }
             } else { int status; waitpid(pid, &status, 0); }
         }
     }
