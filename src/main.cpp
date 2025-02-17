@@ -11,7 +11,6 @@
 #include <sys/wait.h>
 #include <cerrno>
 #include <algorithm>
-#include <cctype>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -29,9 +28,8 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
         if (c == '\\') { escapeNext = true; token.push_back(c); continue; }
         if (c == '\'' && !inDouble) { inSingle = !inSingle; token.push_back(c); }
         else if (c == '"' && !inSingle) { inDouble = !inDouble; token.push_back(c); }
-        else if (c == delimiter && !inSingle && !inDouble) { 
-            if (!token.empty()) { tokens.push_back(token); token.clear(); } 
-        } else { token.push_back(c); }
+        else if (c == delimiter && !inSingle && !inDouble) { if (!token.empty()) { tokens.push_back(token); token.clear(); } }
+        else { token.push_back(c); }
     }
     if (!token.empty()) tokens.push_back(token);
     return tokens;
@@ -56,13 +54,14 @@ std::string findExecutable(const std::string &command) {
     std::string path;
     while (std::getline(iss, path, ':')) {
         std::string fullPath = path + "/" + command;
-        if (access(fullPath.c_str(), X_OK) == 0)
-            return fullPath;
+        if (access(fullPath.c_str(), X_OK) == 0) return fullPath;
     }
     return "";
 }
 
 std::string processEchoLine(const std::string &line) {
+    if (line.size() >= 2 && line.front()=='\'' && line.back()=='\'')
+        return line.substr(1, line.size()-2);
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
     for (size_t i = 0; i < line.size(); i++) {
@@ -87,14 +86,6 @@ std::string processEchoLine(const std::string &line) {
     return out;
 }
 
-std::string trim(const std::string &s) {
-    size_t start = 0;
-    while (start < s.size() && std::isspace((unsigned char)s[start])) start++;
-    size_t end = s.size();
-    while (end > start && std::isspace((unsigned char)s[end-1])) end--;
-    return s.substr(start, end - start);
-}
-
 int main(){
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
@@ -105,10 +96,9 @@ int main(){
         std::getline(std::cin, input);
         if(input=="exit 0") break;
         size_t pos = input.find(' ');
-        std::string command = (pos==std::string::npos)? input : input.substr(0, pos);
+        std::string command = (pos==std::string::npos)? input : input.substr(0,pos);
         if(command=="echo"){
             std::string echoArg = (pos==std::string::npos)? "" : input.substr(pos+1);
-            echoArg = trim(echoArg);
             std::cout << processEchoLine(echoArg) << std::endl;
         }
         else{
@@ -141,8 +131,7 @@ int main(){
                     std::string filePath = unescapePath(args[i]);
                     std::ifstream file(filePath);
                     if(!file){ std::cerr << "cat: " << args[i] << ": No such file or directory" << std::endl; continue; }
-                    std::string content((std::istreambuf_iterator<char>(file)),
-                                        std::istreambuf_iterator<char>());
+                    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                     std::cout << content;
                 }
                 std::cout << std::flush;
@@ -150,7 +139,11 @@ int main(){
             else if(command=="cd"){
                 if(args.size()<2){ std::cerr << "cd: missing argument" << std::endl; continue; }
                 std::string targetDir = args[1];
-                if(targetDir=="~"){ const char* home = std::getenv("HOME"); if(!home){ std::cerr << "cd: HOME not set" << std::endl; continue; } targetDir = home; }
+                if(targetDir=="~"){
+                    const char* home = std::getenv("HOME");
+                    if(!home){ std::cerr << "cd: HOME not set" << std::endl; continue; }
+                    targetDir = home;
+                }
                 if(chdir(targetDir.c_str()) != 0)
                     std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
             }
