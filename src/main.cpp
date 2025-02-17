@@ -92,12 +92,13 @@ std::string trim(const std::string &s) {
 std::string processEchoLine(const std::string &line) {
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
+    std::string currentSegment;
 
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
 
         if (escaped) {
-            out.push_back(c);
+            currentSegment.push_back(c);
             escaped = false;
             continue;
         }
@@ -113,13 +114,19 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\'' && !inDouble) {  
+            if (inSingle) {
+                // Closing single quote, push segment as is
+                out.append(currentSegment);
+                currentSegment.clear();
+            }
             inSingle = !inSingle;
-            continue;  // Just toggle state, don't add quote to output
+            continue;
         }
 
-        out.push_back(c);
+        currentSegment.push_back(c);
     }
 
+    out.append(currentSegment);
     return out;
 }
 
