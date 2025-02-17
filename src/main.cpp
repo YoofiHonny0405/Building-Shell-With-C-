@@ -153,9 +153,16 @@ int main(){
                 std::cerr << "cd: " << targetDir << ": No such file or directory" << std::endl;
         }
         else if (command == "echo") {
-            std::string echoArg = (pos==std::string::npos)? "" : input.substr(pos+1);
+            std::string echoArg;
+            if (args.size() > 1) {
+                size_t pos = input.find(args[1]);
+                if (pos != std::string::npos) {
+                    echoArg = input.substr(pos);
+                }
+            }
             std::cout << processEchoLine(echoArg) << std::endl;
         }
+        
         else{
             pid_t pid = fork();
             if(pid==-1){ std::cerr << "Failed to fork process" << std::endl; }
