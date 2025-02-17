@@ -107,7 +107,7 @@ std::string processEchoLine(const std::string &line) {
             escaped = false;
             continue;
         }
-        
+
         if (c == '\\') {  // Handle escape sequence
             escaped = true;
             continue;
@@ -119,9 +119,9 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // If inside single quotes, we want to ignore extra single quotes and don't push them
+            // Handle cases where there are two consecutive single quotes (like 'test''world')
             if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                // Skip the single quote and don't push it
+                // Skip the second single quote
                 i++;  
             } else {
                 inSingle = !inSingle;  // Toggle single quotes
@@ -129,10 +129,16 @@ std::string processEchoLine(const std::string &line) {
             continue;
         }
 
-        // Handle spaces outside of quotes
+        // Handle spaces inside quotes
+        if (c == ' ' && inSingle) {
+            // Ignore extra spaces inside single quotes
+            continue;
+        }
+
+        // Handle spaces outside quotes (merging words when necessary)
         if (c == ' ' && !inSingle && !inDouble) {
             if (lastWasSpace) continue;  // Skip multiple spaces
-            if (!currentWord.empty()) { 
+            if (!currentWord.empty()) {
                 out.append(currentWord);
                 currentWord.clear();
             }
@@ -151,6 +157,7 @@ std::string processEchoLine(const std::string &line) {
 
     return out;
 }
+
 
 
 
