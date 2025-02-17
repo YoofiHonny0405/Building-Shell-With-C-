@@ -23,19 +23,44 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
     bool inSingle = false, inDouble = false, escapeNext = false;
+    char prevChar = 0;
+
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
-        if (escapeNext) { token.push_back(c); escapeNext = false; continue; }
-        if (c == '\\') { escapeNext = true; token.push_back(c); continue; }
-        if (c == '\'' && !inDouble) { inSingle = !inSingle; token.push_back(c); }
-        else if (c == '"' && !inSingle) { inDouble = !inDouble; token.push_back(c); }
-        else if (c == delimiter && !inSingle && !inDouble) { 
-            if (!token.empty()) { tokens.push_back(token); token.clear(); } 
-        } else { token.push_back(c); }
+        if (escapeNext) { 
+            token.push_back(c); 
+            escapeNext = false; 
+            continue; 
+        }
+        if (c == '\\') { 
+            escapeNext = true; 
+            continue; 
+        }
+        if (c == '\'' && !inDouble) {
+            inSingle = !inSingle;
+            token.push_back(c);
+        }
+        else if (c == '"' && !inSingle) {
+            inDouble = !inDouble;
+            token.push_back(c);
+        }
+        else if (c == delimiter && !inSingle && !inDouble) {
+            if (!token.empty()) {
+                tokens.push_back(token);
+                token.clear();
+            }
+            // Skip adding space if the previous character was also a quote
+            if (prevChar == '"' || prevChar == '\'') continue;
+        } 
+        else {
+            token.push_back(c);
+        }
+        prevChar = c;
     }
     if (!token.empty()) tokens.push_back(token);
     return tokens;
 }
+
 
 std::string unescapePath(const std::string &path) {
     std::string result;
