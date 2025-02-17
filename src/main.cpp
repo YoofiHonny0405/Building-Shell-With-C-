@@ -97,36 +97,61 @@ std::string processEchoLine(const std::string &line) {
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
     bool lastWasSpace = false;  // Flag to handle spacing
+    std::string currentWord;
+
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
+
         if (escaped) {
-            if (inDouble) {
-                if (c == '"' || c == '\\' || c == '$' || c == '\n')
-                    out.push_back(c);
-                else { out.push_back('\\'); out.push_back(c); }
-            } else {
-                out.push_back(c);
-            }
+            currentWord.push_back(c);
             escaped = false;
             continue;
         }
-        if (c == '\\') { escaped = true; continue; }
-        if (c == '"' && !inSingle) { inDouble = !inDouble; continue; }
-        if (c == '\'' && !inDouble) { inSingle = !inSingle; continue; }
+        
+        if (c == '\\') {  // Handle escape sequence
+            escaped = true;
+            continue;
+        }
 
-        // Manage spaces between words, avoiding multiple spaces
+        if (c == '"' && !inSingle) {  // Toggle double quote state
+            inDouble = !inDouble;
+            continue;
+        }
+
+        if (c == '\'' && !inDouble) {  // Toggle single quote state
+            // If inside single quotes, we want to ignore extra single quotes and don't push them
+            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
+                // Skip the single quote and don't push it
+                i++;  
+            } else {
+                inSingle = !inSingle;  // Toggle single quotes
+            }
+            continue;
+        }
+
+        // Handle spaces outside of quotes
         if (c == ' ' && !inSingle && !inDouble) {
             if (lastWasSpace) continue;  // Skip multiple spaces
-            out.push_back(' ');  // Add a single space
+            if (!currentWord.empty()) { 
+                out.append(currentWord);
+                currentWord.clear();
+            }
+            out.push_back(' ');
             lastWasSpace = true;
         } else {
-            out.push_back(c);
+            currentWord.push_back(c);
             lastWasSpace = false;
         }
     }
-    if (escaped) out.push_back('\\');
+
+    // Append the final word if any
+    if (!currentWord.empty()) {
+        out.append(currentWord);
+    }
+
     return out;
 }
+
 
 
 int main(){
