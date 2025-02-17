@@ -89,7 +89,7 @@ std::string trim(const std::string &s) {
     return s.substr(start, end - start + 1);
 }
 
-sstd::string processEchoLine(const std::string &line) {
+std::string processEchoLine(const std::string &line) {
     std::string out;
     bool inSingle = false;
     bool lastWasSpace = false;
@@ -135,7 +135,6 @@ sstd::string processEchoLine(const std::string &line) {
 
     return out;
 }
-
 
 int main(){
     std::cout << std::unitbuf;
