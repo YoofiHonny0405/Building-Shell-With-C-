@@ -69,9 +69,6 @@ std::string trim(const std::string &s) {
     return s.substr(start, end - start + 1);
 }
 
-// processEchoLine processes the raw echo argument line.
-// If the trimmed line is wrapped in single quotes, it returns the inner content verbatim.
-// Otherwise, it processes escapes (in double quotes, \" becomes " and \\ becomes \).
 std::string processEchoLine(const std::string &line) {
     std::string trimmed = trim(line);
     if (trimmed.size() >= 2 && trimmed.front()=='\'' && trimmed.back()=='\'')
