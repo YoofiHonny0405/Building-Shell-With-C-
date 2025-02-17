@@ -26,11 +26,11 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
         if (escapeNext) { token.push_back(c); escapeNext = false; continue; }
-        if (c == '\\') { escapeNext = true; token.push_back(c); continue; }
+        if (c == '\\') { escapeNext = true; continue; }
         if (c == '\'' && !inDouble) { inSingle = !inSingle; token.push_back(c); }
         else if (c == '"' && !inSingle) { inDouble = !inDouble; token.push_back(c); }
         else if (c == delimiter && !inSingle && !inDouble) { 
-            if (!token.empty()) { tokens.push_back(token); token.clear(); } 
+            if (!token.empty()) { tokens.push_back(token); token.clear(); }
         } else { token.push_back(c); }
     }
     if (!token.empty()) tokens.push_back(token);
@@ -62,43 +62,43 @@ std::string findExecutable(const std::string &command) {
     return "";
 }
 
-std::string trim(const std::string &s) {
-    size_t start = s.find_first_not_of(" \t\r\n");
-    if(start == std::string::npos) return "";
-    size_t end = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
-
-// processEchoLine processes the raw echo argument line.
-// If the trimmed line is wrapped in single quotes, it returns the inner content verbatim.
-// Otherwise, it processes escapes (in double quotes, \" becomes " and \\ becomes \).
-std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front()=='\'' && trimmed.back()=='\'')
-        return trimmed.substr(1, trimmed.size()-2);
-
-    std::string out;
-    bool inDouble = false, inSingle = false, escaped = false;
-    for (size_t i = 0; i < line.size(); i++) {
-        char c = line[i];
-        if (escaped) {
-            if (inDouble) {
-                if (c=='"' || c=='\\' || c=='$' || c=='\n')
-                    out.push_back(c);
-                else { out.push_back('\\'); out.push_back(c); }
-            } else {
-                out.push_back(c);
+std::string processEchoTokens(const std::vector<std::string>& tokens) {
+    std::string result;
+    for (size_t i = 0; i < tokens.size(); i++) {
+        std::string token = tokens[i];
+        if (token.size() >= 2 && ( (token.front()=='"' && token.back()=='"') || (token.front()=='\'' && token.back()=='\''))) {
+            char quote = token.front();
+            token = token.substr(1, token.size()-2);
+            if (quote == '"') {
+                std::string proc;
+                bool escape = false;
+                for (char c : token) {
+                    if (escape) {
+                        if (c == '"' || c == '\\' || c == '$' || c == '\n')
+                            proc.push_back(c);
+                        else { proc.push_back('\\'); proc.push_back(c); }
+                        escape = false;
+                    } else if (c == '\\') { escape = true; }
+                    else { proc.push_back(c); }
+                }
+                if (escape) proc.push_back('\\');
+                token = proc;
             }
-            escaped = false;
-            continue;
+        } else {
+            std::string proc;
+            bool escape = false;
+            for (char c : token) {
+                if (escape) { proc.push_back(c); escape = false; }
+                else if (c=='\\') { escape = true; }
+                else { proc.push_back(c); }
+            }
+            if (escape) proc.push_back('\\');
+            token = proc;
         }
-        if (c=='\\') { escaped = true; continue; }
-        if (c=='"' && !inSingle) { inDouble = !inDouble; continue; }
-        if (c=='\'' && !inDouble) { inSingle = !inSingle; continue; }
-        out.push_back(c);
+        if (!result.empty()) result.push_back(' ');
+        result += token;
     }
-    if (escaped) out.push_back('\\');
-    return out;
+    return result;
 }
 
 int main(){
@@ -114,7 +114,8 @@ int main(){
         std::string command = (pos==std::string::npos)? input : input.substr(0, pos);
         if(command=="echo"){
             std::string echoArg = (pos==std::string::npos)? "" : input.substr(pos+1);
-            std::cout << processEchoLine(echoArg) << std::endl;
+            std::vector<std::string> echoTokens = split(echoArg, ' ');
+            std::cout << processEchoTokens(echoTokens) << std::endl;
         }
         else{
             std::vector<std::string> args = split(input, ' ');
