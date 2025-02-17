@@ -91,16 +91,17 @@ std::string trim(const std::string &s) {
 
 std::string processEchoLine(const std::string &line) {
     std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front()=='\'' && trimmed.back()=='\'')
-        return trimmed.substr(1, trimmed.size()-2);
+    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
+        return trimmed.substr(1, trimmed.size() - 2);
 
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
+    bool lastWasSpace = false;  // Flag to handle spacing
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
         if (escaped) {
             if (inDouble) {
-                if (c=='"' || c=='\\' || c=='$' || c=='\n')
+                if (c == '"' || c == '\\' || c == '$' || c == '\n')
                     out.push_back(c);
                 else { out.push_back('\\'); out.push_back(c); }
             } else {
@@ -109,14 +110,24 @@ std::string processEchoLine(const std::string &line) {
             escaped = false;
             continue;
         }
-        if (c=='\\') { escaped = true; continue; }
-        if (c=='"' && !inSingle) { inDouble = !inDouble; continue; }
-        if (c=='\'' && !inDouble) { inSingle = !inSingle; continue; }
-        out.push_back(c);
+        if (c == '\\') { escaped = true; continue; }
+        if (c == '"' && !inSingle) { inDouble = !inDouble; continue; }
+        if (c == '\'' && !inDouble) { inSingle = !inSingle; continue; }
+
+        // Manage spaces between words, avoiding multiple spaces
+        if (c == ' ' && !inSingle && !inDouble) {
+            if (lastWasSpace) continue;  // Skip multiple spaces
+            out.push_back(' ');  // Add a single space
+            lastWasSpace = true;
+        } else {
+            out.push_back(c);
+            lastWasSpace = false;
+        }
     }
     if (escaped) out.push_back('\\');
     return out;
 }
+
 
 int main(){
     std::cout << std::unitbuf;
