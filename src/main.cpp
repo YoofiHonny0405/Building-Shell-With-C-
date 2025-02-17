@@ -32,7 +32,7 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
         }
         if (c == '\\') { 
             escapeNext = true; 
-             token.push_back(c); 
+            token.push_back(c); 
             continue; 
         }
         if (c == '\'' && !inDouble) { 
@@ -115,23 +115,23 @@ std::string processEchoLine(const std::string &line) {
 
         if (c == '"' && !inSingle) {  // Toggle double quote state
             inDouble = !inDouble;
-            
             continue;
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            
-            inSingle = !inSingle;
+            // Handle cases where there are two consecutive single quotes (like 'test''world')
+            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
+                // Skip the second single quote
+                i++;  
+            } else {
+                inSingle = !inSingle;  // Toggle single quotes
+            }
             continue;
         }
 
         // Handle spaces inside quotes
         if (c == ' ' && inSingle) {
-            
-            continue;
-        }
-        if (c == ' ' && inDouble) {
-            
+            // Ignore extra spaces inside single quotes
             continue;
         }
 
@@ -157,6 +157,8 @@ std::string processEchoLine(const std::string &line) {
 
     return out;
 }
+
+
 int main(){
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
