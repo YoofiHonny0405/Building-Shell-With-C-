@@ -115,25 +115,30 @@ std::string processEchoLine(const std::string &line) {
 
         if (c == '"' && !inSingle) {  // Toggle double quote state
             inDouble = !inDouble;
+            currentWord.push_back(c);
             continue;
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Handle cases where there are two consecutive single quotes (like 'test''world')
-            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                // Skip the second single quote
-                i++;  
-            } else {
-                inSingle = !inSingle;  // Toggle single quotes
-            }
+            inSingle = !inSingle;
+            currentWord.push_back(c);
             continue;
         }
 
         // Handle spaces inside quotes
         if (c == ' ' && inSingle) {
-            // Ignore extra spaces inside single quotes
+            // Append it to the current word instead of skipping it
+            currentWord.push_back(c);
+            lastWasSpace = false; // Reset lastWasSpace flag
             continue;
         }
+        if (c == ' ' && inDouble) {
+            // Append it to the current word instead of skipping it
+            currentWord.push_back(c);
+            lastWasSpace = false; // Reset lastWasSpace flag
+            continue;
+        }
+
 
         // Handle spaces outside quotes (merging words when necessary)
         if (c == ' ' && !inSingle && !inDouble) {
