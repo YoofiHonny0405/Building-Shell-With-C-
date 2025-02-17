@@ -112,7 +112,16 @@ std::string processEchoLine(const std::string &line) {
         }
         if (c == '\\') { escaped = true; continue; }
         if (c == '"' && !inSingle) { inDouble = !inDouble; continue; }
-        if (c == '\'' && !inDouble) { inSingle = !inSingle; continue; }
+        if (c == '\'' && !inDouble) { 
+            if (inSingle) {
+                // Closing single quote, handle it properly
+                inSingle = false; 
+            } else {
+                // Opening single quote, ignore it
+                inSingle = true;
+                continue;
+            }
+        }
 
         // Manage spaces between words, avoiding multiple spaces
         if (c == ' ' && !inSingle && !inDouble) {
