@@ -19,46 +19,57 @@
 
 namespace fs = std::filesystem;
 
-std::vector<std::string> split(const std::string &str, char delimiter) {
+std::vector<std::string> split(const std::string &str) {
     std::vector<std::string> tokens;
     std::string token;
     bool inSingle = false, inDouble = false, escapeNext = false;
-    char prevChar = 0;
-
+    
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
-        if (escapeNext) { 
-            token.push_back(c); 
-            escapeNext = false; 
-            continue; 
+        if (escapeNext) {
+            token.push_back(c);
+            escapeNext = false;
+            continue;
         }
-        if (c == '\\') { 
-            escapeNext = true; 
-            continue; 
+        if (c == '\\') {
+            escapeNext = true;
+            continue;
+        }
+        if (c == '"' && !inSingle) {
+            inDouble = !inDouble;
+            continue;
         }
         if (c == '\'' && !inDouble) {
             inSingle = !inSingle;
-            token.push_back(c);
+            continue;
         }
-        else if (c == '"' && !inSingle) {
-            inDouble = !inDouble;
-            token.push_back(c);
-        }
-        else if (c == delimiter && !inSingle && !inDouble) {
+        if (c == ' ' && !inSingle && !inDouble) {
             if (!token.empty()) {
                 tokens.push_back(token);
                 token.clear();
             }
-            // Skip adding space if the previous character was also a quote
-            if (prevChar == '"' || prevChar == '\'') continue;
-        } 
-        else {
-            token.push_back(c);
+            continue;
         }
-        prevChar = c;
+        token.push_back(c);
     }
+    
     if (!token.empty()) tokens.push_back(token);
-    return tokens;
+
+    // Concatenate adjacent quoted strings without spaces
+    std::vector<std::string> mergedTokens;
+    std::string merged;
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        merged += tokens[i];
+        // If the current token ends with a quote, merge it
+        if ((merged.front() == '"' && merged.back() == '"') ||
+            (merged.front() == '\'' && merged.back() == '\'')) {
+            mergedTokens.push_back(merged);
+            merged.clear();
+        }
+    }
+    if (!merged.empty()) mergedTokens.push_back(merged);
+
+    return mergedTokens;
 }
 
 
