@@ -150,7 +150,7 @@ int main(){
             std::cout << processEchoLine(echoArg) << std::endl;
         }
         else{
-            std::vector<std::string> args = split(input, ' ');
+            std::vector<std::string> args = split(input);
             if(args.empty()) continue;
             command = args[0];
             if(command=="type"){
