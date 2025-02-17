@@ -19,19 +19,19 @@
 
 namespace fs = std::filesystem;
 
-enum class TokenType { SINGLE, DOUBLE, UNQUOTED };
+enum class QuoteType { NONE, SINGLE, DOUBLE };
 
 struct EchoToken {
     std::string text;
-    TokenType type;
+    QuoteType quote;
 };
 
-// Parse the raw echo argument line into tokens with type information.
+// Parse the raw echo arguments into tokens that preserve quoting.
 std::vector<EchoToken> parseEchoTokens(const std::string &raw) {
     std::vector<EchoToken> tokens;
     std::string current;
-    TokenType currentType = TokenType::UNQUOTED;
-    bool inDouble = false, inSingle = false, escape = false;
+    QuoteType currentQuote = QuoteType::NONE;
+    bool escape = false;
     for (size_t i = 0; i < raw.size(); i++) {
         char c = raw[i];
         if (escape) {
@@ -43,81 +43,87 @@ std::vector<EchoToken> parseEchoTokens(const std::string &raw) {
             escape = true;
             continue;
         }
-        if (c == '"' && !inSingle) {
-            if (!inDouble) { 
-                // Starting a double-quoted token.
-                inDouble = true;
-                currentType = TokenType::DOUBLE;
-            } else {
-                // Ending a double-quoted token.
-                inDouble = false;
-            }
-            continue;
+        if (c == '"' && currentQuote == QuoteType::NONE) {
+            currentQuote = QuoteType::DOUBLE;
+            continue; // do not include outer quote
+        } else if (c == '"' && currentQuote == QuoteType::DOUBLE) {
+            currentQuote = QuoteType::NONE;
+            continue; // end of double-quoted token
         }
-        if (c == '\'' && !inDouble) {
-            if (!inSingle) { 
-                inSingle = true;
-                currentType = TokenType::SINGLE;
-            } else {
-                inSingle = false;
-            }
-            continue;
+        if (c == '\'' && currentQuote == QuoteType::NONE) {
+            currentQuote = QuoteType::SINGLE;
+            continue; // do not include outer quote
+        } else if (c == '\'' && currentQuote == QuoteType::SINGLE) {
+            currentQuote = QuoteType::NONE;
+            continue; // end of single-quoted token
         }
-        // Outside quotes, whitespace delimits tokens.
-        if (std::isspace(static_cast<unsigned char>(c)) && !inDouble && !inSingle) {
+        // Outside any quotes, whitespace delimits tokens.
+        if (std::isspace(static_cast<unsigned char>(c)) && currentQuote == QuoteType::NONE) {
             if (!current.empty()) {
-                tokens.push_back({ current, currentType });
+                tokens.push_back({current, QuoteType::NONE});
                 current.clear();
-                currentType = TokenType::UNQUOTED;
             }
             continue;
         }
         current.push_back(c);
     }
     if (!current.empty())
-        tokens.push_back({ current, currentType });
+        tokens.push_back({current, currentQuote});
     return tokens;
 }
 
-// Process escape sequences for a token that is double-quoted or unquoted.
-std::string processEscapes(const std::string &s) {
-    std::string out;
-    bool escape = false;
-    for (char c : s) {
-        if (escape) {
-            if (c == '"' || c == '\\' || c == '$' || c == '\n')
-                out.push_back(c);
-            else {
-                out.push_back('\\');
-                out.push_back(c);
-            }
-            escape = false;
-        } else if (c == '\\') {
-            escape = true;
-        } else {
-            out.push_back(c);
-        }
-    }
-    if (escape) out.push_back('\\');
-    return out;
-}
-
-// Join echo tokens using Bash-like rules: tokens are separated by a single space.
-std::string joinEchoTokens(const std::vector<EchoToken> &tokens) {
+// Process tokens for echo.
+// For DOUBLE-quoted tokens, process escapes (\" → ", \\ → \).
+// For SINGLE-quoted tokens, leave text as is.
+// UNQUOTED tokens are left unchanged.
+std::string processEchoTokens(const std::vector<EchoToken> &tokens) {
     std::string result;
     for (size_t i = 0; i < tokens.size(); i++) {
-        std::string processed;
-        if (tokens[i].type == TokenType::SINGLE) {
-            // Single-quoted: leave as is.
-            processed = tokens[i].text;
+        std::string proc;
+        if (tokens[i].quote == QuoteType::DOUBLE) {
+            bool escape = false;
+            for (char c : tokens[i].text) {
+                if (escape) {
+                    if (c == '"' || c == '\\' || c == '$' || c == '\n')
+                        proc.push_back(c);
+                    else {
+                        proc.push_back('\\');
+                        proc.push_back(c);
+                    }
+                    escape = false;
+                } else if (c == '\\') {
+                    escape = true;
+                } else {
+                    proc.push_back(c);
+                }
+            }
+            if (escape)
+                proc.push_back('\\');
         } else {
-            // DOUBLE or UNQUOTED: process escapes.
-            processed = processEscapes(tokens[i].text);
+            proc = tokens[i].text; // For SINGLE and UNQUOTED, no further processing.
         }
         if (!result.empty()) result.push_back(' ');
-        result += processed;
+        result += proc;
     }
     return result;
+}
+
+std::vector<std::string> split(const std::string &str, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    bool inSingle = false, inDouble = false, escapeNext = false;
+    for (size_t i = 0; i < str.size(); ++i) {
+        char c = str[i];
+        if (escapeNext) { token.push_back(c); escapeNext = false; continue; }
+        if (c == '\\') { escapeNext = true; continue; }
+        if (c == '\'' && !inDouble) { inSingle = !inSingle; token.push_back(c); }
+        else if (c == '"' && !inSingle) { inDouble = !inDouble; token.push_back(c); }
+        else if (c == delimiter && !inSingle && !inDouble) { 
+            if (!token.empty()) { tokens.push_back(token); token.clear(); }
+        } else { token.push_back(c); }
+    }
+    if (!token.empty()) tokens.push_back(token);
+    return tokens;
 }
 
 std::string unescapePath(const std::string &path) {
@@ -155,11 +161,11 @@ int main(){
         std::getline(std::cin, input);
         if(input=="exit 0") break;
         size_t pos = input.find(' ');
-        std::string command = (pos==std::string::npos)? input : input.substr(0,pos);
+        std::string command = (pos==std::string::npos) ? input : input.substr(0, pos);
         if(command=="echo"){
-            std::string echoArg = (pos==std::string::npos)? "" : input.substr(pos+1);
+            std::string echoArg = (pos==std::string::npos) ? "" : input.substr(pos+1);
             std::vector<EchoToken> tokens = parseEchoTokens(echoArg);
-            std::cout << joinEchoTokens(tokens) << std::endl;
+            std::cout << processEchoTokens(tokens) << std::endl;
         }
         else{
             std::vector<std::string> args = split(input, ' ');
