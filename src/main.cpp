@@ -90,43 +90,71 @@ std::string trim(const std::string &s) {
 }
 
 std::string processEchoLine(const std::string &line) {
+    std::string trimmed = trim(line);
+    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
+        return trimmed.substr(1, trimmed.size() - 2);
+
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
-    std::string currentSegment;
+    bool lastWasSpace = false;  // Flag to handle spacing
+    std::string currentWord;
 
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
 
         if (escaped) {
-            currentSegment.push_back(c);
+            currentWord.push_back(c);
             escaped = false;
             continue;
         }
 
-        if (c == '\\') {  
+        if (c == '\\') {  // Handle escape sequence
             escaped = true;
             continue;
         }
 
-        if (c == '"' && !inSingle) {  
+        if (c == '"' && !inSingle) {  // Toggle double quote state
             inDouble = !inDouble;
             continue;
         }
 
-        if (c == '\'' && !inDouble) {  
-            if (inSingle) {
-                // Closing single quote, push segment as is
-                out.append(currentSegment);
-                currentSegment.clear();
+        if (c == '\'' && !inDouble) {  // Toggle single quote state
+            // Handle cases where there are two consecutive single quotes (like 'test''world')
+            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
+                // Skip the second single quote
+                i++;  
+            } else {
+                inSingle = !inSingle;  // Toggle single quotes
             }
-            inSingle = !inSingle;
             continue;
         }
 
-        currentSegment.push_back(c);
+        // Handle spaces inside quotes
+        if (c == ' ' && inSingle) {
+            // Ignore extra spaces inside single quotes
+            continue;
+        }
+
+        // Handle spaces outside quotes (merging words when necessary)
+        if (c == ' ' && !inSingle && !inDouble) {
+            if (lastWasSpace) continue;  // Skip multiple spaces
+            if (!currentWord.empty()) {
+                out.append(currentWord);
+                currentWord.clear();
+            }
+            out.push_back(' ');
+            lastWasSpace = true;
+        } else {
+            currentWord.push_back(c);
+            lastWasSpace = false;
+        }
     }
 
-    out.append(currentSegment);
+    // Append the final word if any
+    if (!currentWord.empty()) {
+        out.append(currentWord);
+    }
+
     return out;
 }
 
