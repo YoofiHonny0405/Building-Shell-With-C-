@@ -26,18 +26,8 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
         if (escapeNext) { token.push_back(c); escapeNext = false; continue; }
-        if (c == '\\') { escapeNext = true; continue; }
-        if (c == '\'' && !inDouble) { inSingle = !inSingle; continue; }
-        if (c == '"' && !inSingle) { inDouble = !inDouble; continue; }
-        if (c == delimiter && !inSingle && !inDouble) { 
-            if (!token.empty()) { tokens.push_back(token); token.clear(); } 
-        } else { token.push_back(c); }
-    }
-    if (!token.empty()) tokens.push_back(token);
-    return tokens;
-}
         if (c == '\\') { escapeNext = true; token.push_back(c); continue; }
-        if (c == '\\'' && !inDouble) { inSingle = !inSingle; token.push_back(c); }
+        if (c == '\'' && !inDouble) { inSingle = !inSingle; token.push_back(c); }
         else if (c == '"' && !inSingle) { inDouble = !inDouble; token.push_back(c); }
         else if (c == delimiter && !inSingle && !inDouble) { 
             if (!token.empty()) { tokens.push_back(token); token.clear(); } 
@@ -52,7 +42,7 @@ std::string unescapePath(const std::string &path) {
     bool inSingle = false, inDouble = false;
     for (size_t i = 0; i < path.size(); ++i) {
         char c = path[i];
-        if (c == '\\'' && !inDouble) { inSingle = !inSingle; continue; }
+        if (c == '\'' && !inDouble) { inSingle = !inSingle; continue; }
         if (c == '"' && !inSingle) { inDouble = !inDouble; continue; }
         result.push_back(c);
     }
@@ -81,7 +71,7 @@ std::string trim(const std::string &s) {
 
 std::string processEchoLine(const std::string &line) {
     std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front()=='\\'' && trimmed.back()=='\\'')
+    if (trimmed.size() >= 2 && trimmed.front()=='\'' && trimmed.back()=='\'')
         return trimmed.substr(1, trimmed.size()-2);
 
     std::string out;
@@ -101,7 +91,7 @@ std::string processEchoLine(const std::string &line) {
         }
         if (c=='\\') { escaped = true; continue; }
         if (c=='"' && !inSingle) { inDouble = !inDouble; continue; }
-        if (c=='\\'' && !inDouble) { inSingle = !inSingle; continue; }
+        if (c=='\'' && !inDouble) { inSingle = !inSingle; continue; }
         out.push_back(c);
     }
     if (escaped) out.push_back('\\');
