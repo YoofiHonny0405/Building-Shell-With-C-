@@ -105,8 +105,8 @@ std::string processEchoLine(const std::string &line) {
 
         // Handle escape sequences
         if (escaped) {
-            // If escaped character is a single quote, keep it escaped
-            if (c == '\'' || c == '"' || c == '\\') {
+            // Special case: Collapse \\' to \'
+            if (c == '\'' && inDouble) {
                 out.push_back('\\');
             }
             out.push_back(c);
