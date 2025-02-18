@@ -23,35 +23,46 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
     bool inSingle = false, inDouble = false, escapeNext = false;
+    
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
-        if (escapeNext) { 
-            token.push_back(c); 
-            escapeNext = false; 
-            continue; 
+        
+        // Handle escape sequence within double quotes
+        if (escapeNext) {
+            token.push_back(c);
+            escapeNext = false;
+            continue;
         }
-        if (c == '\\') { 
-            escapeNext = true; 
-            token.push_back(c); 
-            continue; 
+
+        // Check for backslash
+        if (c == '\\') {
+            escapeNext = true;
+            continue;
         }
-        if (c == '\'' && !inDouble) { 
-            inSingle = !inSingle; 
-            token.push_back(c); 
+
+        // Toggle single and double quotes
+        if (c == '"' && !inSingle) {
+            inDouble = !inDouble;
+            token.push_back(c);  // Keep quotes for file path processing
+            continue;
         }
-        else if (c == '"' && !inSingle) { 
-            inDouble = !inDouble; 
-            token.push_back(c); 
+        if (c == '\'' && !inDouble) {
+            inSingle = !inSingle;
+            token.push_back(c);  // Preserve single quotes as-is
+            continue;
         }
-        else if (c == delimiter && !inSingle && !inDouble) { 
-            if (!token.empty()) { 
-                tokens.push_back(token); 
-                token.clear(); 
-            } 
-        } else { 
-            token.push_back(c); 
+
+        // Split by delimiter only if outside of quotes
+        if (c == delimiter && !inSingle && !inDouble) {
+            if (!token.empty()) {
+                tokens.push_back(token);
+                token.clear();
+            }
+        } else {
+            token.push_back(c);
         }
     }
+
     if (!token.empty()) tokens.push_back(token);
     return tokens;
 }
@@ -90,69 +101,43 @@ std::string trim(const std::string &s) {
 }
 
 std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
-        return trimmed.substr(1, trimmed.size() - 2);
-
     std::string out;
-    bool inDouble = false, inSingle = false, escaped = false;
-    bool lastWasSpace = false;  // Flag to handle spacing
-    std::string currentWord;
+    bool inDouble = false, inSingle = false;
+    bool escapeNext = false;
 
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
 
-        if (escaped) {
-            currentWord.push_back(c);
-            escaped = false;
+        // Handle escape sequences in double quotes
+        if (escapeNext) {
+            if (inDouble && (c == '\\' || c == '$' || c == '"' || c == 'n')) {
+                out.push_back('\\');  // Preserve the backslash
+            }
+            out.push_back(c);
+            escapeNext = false;
             continue;
         }
 
-        if (c == '\\') {  // Handle escape sequence
-            escaped = true;
+        // Check for backslash to enable escaping next character
+        if (c == '\\') {
+            escapeNext = true;
             continue;
         }
 
-        if (c == '"' && !inSingle) {  // Toggle double quote state
+        // Toggle single quotes (preserve all characters literally)
+        if (c == '\'' && !inDouble) {  
+            inSingle = !inSingle;
+            continue;
+        }
+
+        // Toggle double quotes
+        if (c == '"' && !inSingle) {  
             inDouble = !inDouble;
             continue;
         }
 
-        if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Handle cases where there are two consecutive single quotes (like 'test''world')
-            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                // Skip the second single quote
-                i++;  
-            } else {
-                inSingle = !inSingle;  // Toggle single quotes
-            }
-            continue;
-        }
-
-        // Handle spaces inside quotes
-        if (c == ' ' && inSingle) {
-            // Ignore extra spaces inside single quotes
-            continue;
-        }
-
-        // Handle spaces outside quotes (merging words when necessary)
-        if (c == ' ' && !inSingle && !inDouble) {
-            if (lastWasSpace) continue;  // Skip multiple spaces
-            if (!currentWord.empty()) {
-                out.append(currentWord);
-                currentWord.clear();
-            }
-            out.push_back(' ');
-            lastWasSpace = true;
-        } else {
-            currentWord.push_back(c);
-            lastWasSpace = false;
-        }
-    }
-
-    // Append the final word if any
-    if (!currentWord.empty()) {
-        out.append(currentWord);
+        // Collect characters as they are
+        out.push_back(c);
     }
 
     return out;
