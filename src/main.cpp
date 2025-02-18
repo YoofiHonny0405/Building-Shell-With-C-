@@ -32,13 +32,16 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
         }
         if (c == '\\') { 
             escapeNext = true; 
+            token.push_back(c); 
             continue; 
         }
         if (c == '\'' && !inDouble) { 
             inSingle = !inSingle; 
+            token.push_back(c); 
         }
         else if (c == '"' && !inSingle) { 
             inDouble = !inDouble; 
+            token.push_back(c); 
         }
         else if (c == delimiter && !inSingle && !inDouble) { 
             if (!token.empty()) { 
@@ -94,17 +97,19 @@ std::string processEchoLine(const std::string &line) {
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
 
+        // Handle escape sequences
         if (escaped) {
             out.push_back(c);
             escaped = false;
             continue;
         }
 
-        if (c == '\\') {
+        if (c == '\\' && !inSingle) {  // Backslashes are literal in single quotes
             escaped = true;
             continue;
         }
 
+        // Handle quotes
         if (c == '"' && !inSingle) {
             inDouble = !inDouble;
             continue;
@@ -115,15 +120,23 @@ std::string processEchoLine(const std::string &line) {
             continue;
         }
 
-        if (c == ' ' && !inSingle && !inDouble) {
-            if (!lastWasSpace) {
+        // Handle spaces
+        if (c == ' ') {
+            if (inSingle || inDouble) {
                 out.push_back(c);
-                lastWasSpace = true;
+                lastWasSpace = false;
+            } else {
+                if (!lastWasSpace) {
+                    out.push_back(c);
+                    lastWasSpace = true;
+                }
             }
-        } else {
-            out.push_back(c);
-            lastWasSpace = false;
+            continue;
         }
+
+        // Handle regular characters
+        out.push_back(c);
+        lastWasSpace = false;
     }
 
     // Trim trailing spaces
