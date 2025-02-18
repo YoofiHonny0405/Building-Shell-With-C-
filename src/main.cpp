@@ -92,71 +92,33 @@ std::string trim(const std::string &s) {
     return s.substr(start, end - start + 1);
 }
 
+std::string removeSingleQuotes(const std::string &s) {
+    std::string result;
+    for (char c : s) {
+        if (c != '\'') {  // remove all single quotes
+            result.push_back(c);
+        }
+    }
+    return result;
+}
+
 std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    std::string out;
-    bool inSingle = false, inDouble = false, escaped = false;
-    bool lastWasSpace = false;  // Flag to handle spacing
-    std::string currentWord;
-
-    for (size_t i = 0; i < trimmed.size(); i++) {
-        char c = trimmed[i];
-
-        if (escaped) {
-            currentWord.push_back(c);
-            escaped = false;
-            continue;
-        }
-
-        if (c == '\\') {  // Handle escape sequence
-            escaped = true;
-            continue;
-        }
-
-        if (c == '"' && !inSingle) {  // Toggle double quote state
-            inDouble = !inDouble;
-            continue;
-        }
-
-        if (c == '\'' && !inDouble) {  // Handle single quote
-            if (inSingle) {
-                inSingle = false;  // Closing single quote
-            } else {
-                inSingle = true;   // Opening single quote
-            }
-            continue;
-        }
-
-        if (c == ' ' && inSingle) {
-            // Skip the extra spaces inside single quotes (reduce to one space)
-            if (!lastWasSpace) {
-                currentWord.push_back(c);
-                lastWasSpace = true;
-            }
-            continue;
-        }
-
-        // Handle spaces outside quotes (merging words when necessary)
-        if (c == ' ' && !inSingle && !inDouble) {
-            if (lastWasSpace) continue;  // Skip multiple spaces
-            if (!currentWord.empty()) {
-                out.append(currentWord);
-                currentWord.clear();
-            }
-            out.push_back(' ');
-            lastWasSpace = true;
-        } else {
-            currentWord.push_back(c);
-            lastWasSpace = false;
-        }
+    // Use your split() function to break the line into tokens.
+    std::vector<std::string> tokens = split(line, ' ');
+    
+    // Process each token by removing single quotes.
+    for (auto &token : tokens) {
+        token = removeSingleQuotes(token);
     }
-
-    // Append the final word if any
-    if (!currentWord.empty()) {
-        out.append(currentWord);
+    
+    // Rejoin tokens with a single space.
+    std::string output;
+    for (size_t i = 0; i < tokens.size(); i++) {
+        output += tokens[i];
+        if (i != tokens.size() - 1)
+            output += " ";
     }
-
-    return out;
+    return output;
 }
 
 
