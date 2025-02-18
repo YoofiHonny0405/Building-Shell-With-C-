@@ -12,6 +12,7 @@
 #include <cerrno>
 #include <algorithm>
 #include <cctype>
+#include <cstring>  
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
