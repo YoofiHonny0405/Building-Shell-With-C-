@@ -23,46 +23,35 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
     bool inSingle = false, inDouble = false, escapeNext = false;
-    
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
-        
-        // Handle escape sequence within double quotes
-        if (escapeNext) {
-            token.push_back(c);
-            escapeNext = false;
-            continue;
+        if (escapeNext) { 
+            token.push_back(c); 
+            escapeNext = false; 
+            continue; 
         }
-
-        // Check for backslash
-        if (c == '\\') {
-            escapeNext = true;
-            continue;
+        if (c == '\\') { 
+            escapeNext = true; 
+            token.push_back(c); 
+            continue; 
         }
-
-        // Toggle single and double quotes
-        if (c == '"' && !inSingle) {
-            inDouble = !inDouble;
-            token.push_back(c);  // Keep quotes for file path processing
-            continue;
+        if (c == '\'' && !inDouble) { 
+            inSingle = !inSingle; 
+            token.push_back(c); 
         }
-        if (c == '\'' && !inDouble) {
-            inSingle = !inSingle;
-            token.push_back(c);  // Preserve single quotes as-is
-            continue;
+        else if (c == '"' && !inSingle) { 
+            inDouble = !inDouble; 
+            token.push_back(c); 
         }
-
-        // Split by delimiter only if outside of quotes
-        if (c == delimiter && !inSingle && !inDouble) {
-            if (!token.empty()) {
-                tokens.push_back(token);
-                token.clear();
-            }
-        } else {
-            token.push_back(c);
+        else if (c == delimiter && !inSingle && !inDouble) { 
+            if (!token.empty()) { 
+                tokens.push_back(token); 
+                token.clear(); 
+            } 
+        } else { 
+            token.push_back(c); 
         }
     }
-
     if (!token.empty()) tokens.push_back(token);
     return tokens;
 }
@@ -102,46 +91,75 @@ std::string trim(const std::string &s) {
 
 std::string processEchoLine(const std::string &line) {
     std::string out;
-    bool inDouble = false, inSingle = false;
-    bool escapeNext = false;
+    bool inSingle = false;
+    bool inDouble = false;
+    bool escaped = false;
+    std::string currentWord;
 
-    for (size_t i = 0; i < line.size(); i++) {
+    for (size_t i = 0; i < line.size(); ++i) {
         char c = line[i];
 
-        // Handle escape sequences in double quotes
-        if (escapeNext) {
-            if (inDouble && (c == '\\' || c == '$' || c == '"' || c == 'n')) {
-                out.push_back('\\');  // Preserve the backslash
-            }
-            out.push_back(c);
-            escapeNext = false;
+        // Handle escape characters
+        if (escaped) {
+            currentWord.push_back(c);
+            escaped = false;
             continue;
         }
 
-        // Check for backslash to enable escaping next character
         if (c == '\\') {
-            escapeNext = true;
+            escaped = true;
             continue;
         }
 
-        // Toggle single quotes (preserve all characters literally)
-        if (c == '\'' && !inDouble) {  
-            inSingle = !inSingle;
-            continue;
-        }
-
-        // Toggle double quotes
-        if (c == '"' && !inSingle) {  
+        // Toggle state for double quotes
+        if (c == '"' && !inSingle) {
             inDouble = !inDouble;
             continue;
         }
 
-        // Collect characters as they are
-        out.push_back(c);
+        // Toggle state for single quotes
+        if (c == '\'' && !inDouble) {
+            if (inSingle) {
+                // End of a quoted section, append the current word
+                out.append(currentWord);
+                currentWord.clear();
+            }
+            inSingle = !inSingle;
+            continue;
+        }
+
+        // Handle spaces
+        if (c == ' ') {
+            if (inSingle) {
+                // Preserve spaces inside single quotes
+                currentWord.push_back(c);
+            } else {
+                // Outside quotes, handle spacing between words
+                if (!currentWord.empty()) {
+                    out.append(currentWord);
+                    currentWord.clear();
+                    out.push_back(' ');
+                }
+            }
+        } else {
+            // Collect non-space characters
+            currentWord.push_back(c);
+        }
+    }
+
+    // Append the last word if any
+    if (!currentWord.empty()) {
+        out.append(currentWord);
+    }
+
+    // Trim trailing spaces
+    if (!out.empty() && out.back() == ' ') {
+        out.pop_back();
     }
 
     return out;
 }
+
 
 
 int main(){
