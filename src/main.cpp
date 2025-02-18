@@ -190,7 +190,7 @@ void handleCdCommand(const std::vector<std::string>& args) {
 
     // Attempt to change directory
     if (chdir(targetDir.c_str()) != 0) {
-        std::cerr << "cd: " << strerror(errno) << std::endl;
+        std::cerr << "cd: " << targetDir << ": " << strerror(errno) << std::endl;
     }
 }
 
