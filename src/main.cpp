@@ -93,72 +93,66 @@ std::string trim(const std::string &s) {
 }
 
 std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
-        return trimmed.substr(1, trimmed.size() - 2);
+    std::string result;
+    size_t i = 0;
+    bool needSpace = false; // indicates that a space was encountered outside tokens
 
-    std::string out;
-    bool inDouble = false, inSingle = false, escaped = false;
-    bool lastWasSpace = false;  // Flag to handle spacing
-    std::string currentWord;
-
-    for (size_t i = 0; i < line.size(); i++) {
-        char c = line[i];
-
-        if (escaped) {
-            currentWord.push_back(c);
-            escaped = false;
-            continue;
+    while (i < line.size()) {
+        // Skip any whitespace outside a quoted segment.
+        bool sawSpace = false;
+        while (i < line.size() && isspace(line[i])) {
+            sawSpace = true;
+            i++;
         }
+        if (sawSpace && !result.empty())
+            needSpace = true; // mark that a delimiter was seen
 
-        if (c == '\\') {  // Handle escape sequence
-            escaped = true;
-            continue;
-        }
+        if (i >= line.size())
+            break;
 
-        if (c == '"' && !inSingle) {  // Toggle double quote state
-            inDouble = !inDouble;
-            continue;
-        }
-
-        if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Handle cases where there are two consecutive single quotes (like 'test''world')
-            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                // Skip the second single quote
-                i++;  
-            } else {
-                inSingle = !inSingle;  // Toggle single quotes
+        std::string token;
+        if (line[i] == '\'') {
+            // Process a single-quoted segment.
+            i++; // skip opening '
+            while (i < line.size() && line[i] != '\'') {
+                if (isspace(line[i])) {
+                    // Collapse consecutive spaces: if token already ends with a space, skip.
+                    if (token.empty() || token.back() == ' ') {
+                        // skip extra space
+                    } else {
+                        token.push_back(' ');
+                    }
+                } else {
+                    token.push_back(line[i]);
+                }
+                i++;
             }
-            continue;
-        }
-
-        // Handle spaces inside quotes
-        if (c == ' ' && inSingle) {
-            // Ignore extra spaces inside single quotes
-            continue;
-        }
-
-        // Handle spaces outside quotes (merging words when necessary)
-        if (c == ' ' && !inSingle && !inDouble) {
-            if (lastWasSpace) continue;  // Skip multiple spaces
-            if (!currentWord.empty()) {
-                out.append(currentWord);
-                currentWord.clear();
+            if (i < line.size() && line[i] == '\'')
+                i++; // skip closing '
+        } else if (line[i] == '"') {
+            // Process a double-quoted segment (we leave its content as is).
+            i++; // skip opening "
+            while (i < line.size() && line[i] != '"') {
+                token.push_back(line[i]);
+                i++;
             }
-            out.push_back(' ');
-            lastWasSpace = true;
+            if (i < line.size() && line[i] == '"')
+                i++; // skip closing "
         } else {
-            currentWord.push_back(c);
-            lastWasSpace = false;
+            // Process an unquoted token.
+            while (i < line.size() && !isspace(line[i])) {
+                token.push_back(line[i]);
+                i++;
+            }
         }
-    }
 
-    // Append the final word if any
-    if (!currentWord.empty()) {
-        out.append(currentWord);
+        // When appending the token, insert a space if needed.
+        if (!result.empty() && needSpace)
+            result.push_back(' ');
+        result.append(token);
+        needSpace = false;
     }
-
-    return out;
+    return result;
 }
 
 
