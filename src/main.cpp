@@ -123,7 +123,6 @@ std::string processEchoLine(const std::string &line) {
         // Handle double quotes
         if (c == '"' && !inSingle) {
             inDouble = !inDouble;
-            out.push_back(c);
             continue;
         }
 
@@ -137,10 +136,7 @@ std::string processEchoLine(const std::string &line) {
         out.push_back(c);
     }
 
-    // If the entire line was wrapped in double quotes, re-wrap it
-    if (isOuterDouble) {
-        return "\"" + out + "\"";
-    }
+    // Return the output without double quotes around it
     return out;
 }
 
