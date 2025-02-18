@@ -107,6 +107,7 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\\') {
+            // Escape next character
             escaped = true;
             currentWord.push_back(c);  // Keep the backslash for accurate reproduction
             continue;
@@ -115,18 +116,15 @@ std::string processEchoLine(const std::string &line) {
         // Toggle state for double quotes
         if (c == '"' && !inSingle) {
             inDouble = !inDouble;
+            currentWord.push_back(c); // Keep double quotes
             continue;
         }
 
         // Toggle state for single quotes
         if (c == '\'' && !inDouble) {
-            if (inSingle) {
-                // End of a quoted section, append the current word
-                out.append(currentWord);
-                currentWord.clear();
-            }
+            // End of a quoted section, append the current word
             inSingle = !inSingle;
-            continue;
+            continue; // Do not include single quotes themselves
         }
 
         // Handle spaces outside quotes
