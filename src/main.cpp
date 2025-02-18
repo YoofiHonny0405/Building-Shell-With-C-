@@ -123,7 +123,8 @@ std::string processEchoLine(const std::string &line) {
         if (c == '\'' && !inDouble) {  // Toggle single quote state
             // Handle consecutive single quotes: treat them as empty strings
             if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                i++;  // Skip the second single quote, treat '' as no-op
+                i++;  // Skip the second single quote
+                continue;  // No-op for consecutive single quotes
             } else {
                 inSingle = !inSingle;  // Toggle single quotes
             }
