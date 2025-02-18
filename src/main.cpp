@@ -89,74 +89,45 @@ std::string trim(const std::string &s) {
     return s.substr(start, end - start + 1);
 }
 
-std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
-        return trimmed.substr(1, trimmed.size() - 2);
-
-    std::string out;
-    bool inDouble = false, inSingle = false, escaped = false;
-    bool lastWasSpace = false;  // Flag to handle spacing
-    std::string currentWord;
-
-    for (size_t i = 0; i < line.size(); i++) {
-        char c = line[i];
-
-        if (escaped) {
-            currentWord.push_back(c);
-            escaped = false;
-            continue;
-        }
-
-        if (c == '\\') {  // Handle escape sequence
-            escaped = true;
-            continue;
-        }
-
-        if (c == '"' && !inSingle) {  // Toggle double quote state
-            inDouble = !inDouble;
-            continue;
-        }
-
-        if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Handle cases where there are two consecutive single quotes (like 'test''world')
-            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                // Skip the second single quote
-                i++;  
-            } else {
-                inSingle = !inSingle;  // Toggle single quotes
+// Helper: if a token is entirely enclosed in matching quotes, remove them and all quote characters inside.
+std::string removeEnclosingQuotes(const std::string &token) {
+    if (token.size() >= 2) {
+        char first = token.front();
+        char last = token.back();
+        if ((first == '\'' && last == '\'') || (first == '"' && last == '"')) {
+            std::string res;
+            // Remove all occurrences of the quote character from the inner portion.
+            for (size_t i = 1; i < token.size() - 1; i++) {
+                if (token[i] != first)
+                    res.push_back(token[i]);
             }
-            continue;
-        }
-
-        // Handle spaces inside quotes
-        if (c == ' ' && inSingle) {
-            // Ignore extra spaces inside single quotes
-            continue;
-        }
-
-        // Handle spaces outside quotes (merging words when necessary)
-        if (c == ' ' && !inSingle && !inDouble) {
-            if (lastWasSpace) continue;  // Skip multiple spaces
-            if (!currentWord.empty()) {
-                out.append(currentWord);
-                currentWord.clear();
-            }
-            out.push_back(' ');
-            lastWasSpace = true;
-        } else {
-            currentWord.push_back(c);
-            lastWasSpace = false;
+            return res;
         }
     }
-
-    // Append the final word if any
-    if (!currentWord.empty()) {
-        out.append(currentWord);
-    }
-
-    return out;
+    return token;
 }
+
+std::string processEchoLine(const std::string &line) {
+    // First, split the line using your existing split() function.
+    std::vector<std::string> tokens = split(line, ' ');
+    
+    // For each token, if it is entirely enclosed in quotes, remove them.
+    for (auto &token : tokens) {
+        token = removeEnclosingQuotes(token);
+    }
+    
+    // Rejoin tokens with a single space (only if there was whitespace between them).
+    std::string result;
+    bool first = true;
+    for (const auto &token : tokens) {
+        if (!first)
+            result.push_back(' ');
+        result.append(token);
+        first = false;
+    }
+    return result;
+}
+
 
 
 int main(){
