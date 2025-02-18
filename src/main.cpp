@@ -101,13 +101,14 @@ std::string processEchoLine(const std::string &line) {
 
         // Handle escape characters
         if (escaped) {
-            currentWord.push_back(c);
+            currentWord.push_back(c);  // Preserve the escaped character
             escaped = false;
             continue;
         }
 
         if (c == '\\') {
             escaped = true;
+            currentWord.push_back(c);  // Keep the backslash for accurate reproduction
             continue;
         }
 
@@ -128,18 +129,12 @@ std::string processEchoLine(const std::string &line) {
             continue;
         }
 
-        // Handle spaces
-        if (c == ' ') {
-            if (inSingle) {
-                // Preserve spaces inside single quotes
-                currentWord.push_back(c);
-            } else {
-                // Outside quotes, handle spacing between words
-                if (!currentWord.empty()) {
-                    out.append(currentWord);
-                    currentWord.clear();
-                    out.push_back(' ');
-                }
+        // Handle spaces outside quotes
+        if (c == ' ' && !inSingle && !inDouble) {
+            if (!currentWord.empty()) {
+                out.append(currentWord);
+                currentWord.clear();
+                out.push_back(' ');  // Add a space between words
             }
         } else {
             // Collect non-space characters
