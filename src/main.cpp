@@ -90,70 +90,51 @@ std::string trim(const std::string &s) {
 }
 
 std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
-        return trimmed.substr(1, trimmed.size() - 2);
-
+    std::string trimmed = trim(line); // Trim leading/trailing whitespace
     std::string out;
-    bool inDouble = false, inSingle = false, escaped = false;
-    bool lastWasSpace = false;  // Flag to handle spacing
+    bool inSingle = false;  // Track if we are inside single quotes
+    bool lastWasSpace = false; // Track if the last character was a space
     std::string currentWord;
 
-    for (size_t i = 0; i < line.size(); i++) {
-        char c = line[i];
+    for (size_t i = 0; i < trimmed.size(); i++) {
+        char c = trimmed[i];
 
-        if (escaped) {
-            currentWord.push_back(c);
-            escaped = false;
-            continue;
-        }
-
-        if (c == '\\') {  // Handle escape sequence
-            escaped = true;
-            continue;
-        }
-
-        if (c == '"' && !inSingle) {  // Toggle double quote state
-            inDouble = !inDouble;
-            continue;
-        }
-
-        if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Case 1: Skip single quote followed by a space
-            if (inSingle && i + 1 < line.size() && line[i + 1] == ' ') {
-                out.push_back(' ');  // Add the space and skip the quote
-                i++;  // Skip the space after the quote
+        // Handle the single quote logic
+        if (c == '\'' && !lastWasSpace) {
+            // Toggle inSingle state, if not the first or consecutive quote
+            if (inSingle && i + 1 < trimmed.size() && trimmed[i + 1] == ' ') {
+                out.push_back(' ');  // Add space after closing quote
+                i++;  // Skip over space
             }
-            // Case 2: Skip consecutive single quotes (like ''), no need to append
-            else if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                i++;  // Skip the second single quote
+            if (inSingle && i + 1 < trimmed.size() && trimmed[i + 1] == '\'') {
+                i++;  // Skip consecutive single quote (e.g., '')
             } else {
-                inSingle = !inSingle;  // Toggle single quotes
+                inSingle = !inSingle; // Toggle inside/outside single quote
             }
-            continue;
+            continue;  // Skip the quote character
         }
 
-        // Handle spaces inside quotes
+        // Ignore spaces within single quotes but outside double quotes
         if (c == ' ' && inSingle) {
-            continue;  // Ignore extra spaces inside single quotes
+            continue; // Skip extra spaces inside single quotes
         }
 
-        // Handle spaces outside quotes (merging words when necessary)
-        if (c == ' ' && !inSingle && !inDouble) {
-            if (lastWasSpace) continue;  // Skip multiple spaces
+        // Handle spaces between words outside quotes
+        if (c == ' ' && !inSingle) {
+            if (lastWasSpace) continue; // Avoid multiple consecutive spaces
             if (!currentWord.empty()) {
-                out.append(currentWord);
+                out.append(currentWord); // Append the current word
                 currentWord.clear();
             }
-            out.push_back(' ');
+            out.push_back(' '); // Add a single space to the result
             lastWasSpace = true;
         } else {
-            currentWord.push_back(c);
+            currentWord.push_back(c); // Add the current character to the word
             lastWasSpace = false;
         }
     }
 
-    // Append the final word if any
+    // Append the final word if there is one
     if (!currentWord.empty()) {
         out.append(currentWord);
     }
