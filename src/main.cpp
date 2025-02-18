@@ -91,9 +91,6 @@ std::string trim(const std::string &s) {
 
 std::string processEchoLine(const std::string &line) {
     std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
-        return trimmed.substr(1, trimmed.size() - 2);
-
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
     bool lastWasSpace = false;
@@ -119,10 +116,10 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Handle the case where there is space between single quotes
+            // Check if there is space between single quotes, and handle accordingly
             if (inSingle && i + 1 < line.size() && line[i + 1] == ' ') {
-                out.push_back(' '); // Add a space when there is a space between single quotes
-                i++; // Skip the space between single quotes
+                out.push_back(' ');  // Add space when there is space between single quotes
+                i++; // Skip the space
             }
             else if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
                 // Skip consecutive single quotes
