@@ -187,13 +187,28 @@ void handleCdCommand(const std::vector<std::string>& args) {
             }
         }
     }
-
     // Attempt to change directory
     if (chdir(targetDir.c_str()) != 0) {
         std::cerr << "cd: " << targetDir << ": " << strerror(errno) << std::endl;
     }
 }
 
+void handlePwdCommand() {
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+        std::cout << cwd << std::endl;
+    } else {
+        std::cerr << "pwd: " << strerror(errno) << std::endl;
+    }
+}
+
+void handleTypeCommand(const std::string& command) {
+    if (command == "pwd") {
+        std::cout << "pwd is a shell builtin" << std::endl;
+    } else {
+        std::cerr << "type: command not found" << std::endl;
+    }
+}
 
 int main() {
     std::cout << std::unitbuf;
@@ -210,6 +225,18 @@ int main() {
         if (command == "cd") {
             handleCdCommand(cmd.args);
             continue; // Skip further processing for "cd"
+        }
+        if (command == "pwd") {
+            handlePwdCommand();
+            continue; // Skip further processing for "pwd"
+        }
+        if (command == "type") {
+            if (cmd.args.size() > 1) {
+                handleTypeCommand(cmd.args[1]);
+            } else {
+                std::cerr << "type: missing operand" << std::endl;
+            }
+            continue; // Skip further processing for "type"
         }
         if(command == "echo") {
             pid_t pid = fork();
