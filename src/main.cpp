@@ -90,99 +90,76 @@ std::string trim(const std::string &s) {
 }
 
 std::string processEchoLine(const std::string &line) {
-    std::string result;
-    std::string token;
-    enum State { OUT, IN_DOUBLE, IN_SINGLE } state = OUT;
-    bool betweenTokens = false; // tracks whitespace outside tokens
+    std::string trimmed = trim(line);
+    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
+        return trimmed.substr(1, trimmed.size() - 2);
 
-    auto flushToken = [&]() {
-        if (!token.empty()) {
-            if (!result.empty() && betweenTokens)
-                result.push_back(' ');
-            result.append(token);
-            token.clear();
-        }
-        betweenTokens = false;
-    };
+    std::string out;
+    bool inDouble = false, inSingle = false, escaped = false;
+    bool lastWasSpace = false;  // Flag to handle spacing
+    std::string currentWord;
 
-    size_t i = 0;
-    while (i < line.size()) {
+    for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
-        if (state == OUT) {
-            if (isspace(c)) {
-                betweenTokens = true;
-                i++;
-            } else if (c == '"') {
-                state = IN_DOUBLE;
-                token.push_back(c); // output the opening double quote
-                i++;
-            } else if (c == '\'') {
-                state = IN_SINGLE;
-                // Do not output the opening single quote
-                i++;
-            } else if (c == '\\') {
-                // Handle backslashes outside quotes properly
-                if (i + 1 < line.size() && (line[i+1] == '"' || line[i+1] == '\\')) {
-                    token.push_back(line[i+1]); 
-                    i += 2;
-                } else {
-                    token.push_back(c);
-                    i++;
-                }
+
+        if (escaped) {
+            currentWord.push_back(c);
+            escaped = false;
+            continue;
+        }
+
+        if (c == '\\') {  // Handle escape sequence
+            escaped = true;
+            continue;
+        }
+
+        if (c == '"' && !inSingle) {  // Toggle double quote state
+            inDouble = !inDouble;
+            continue;
+        }
+
+        if (c == '\'' && !inDouble) {  // Toggle single quote state
+            // Handle cases where there are two consecutive single quotes (like 'test''world')
+            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
+                // Skip the second single quote and merge them
+                i++;  
             } else {
-                token.push_back(c);
-                i++;
+                inSingle = !inSingle;  // Toggle single quotes
             }
-        } else if (state == IN_DOUBLE) {
-            if (c == '\\') {
-                if (i + 1 < line.size()) {
-                    char next = line[i+1];
-                    if (next == '"' || next == '\\') {
-                        token.push_back(next);
-                        i += 2;
-                    } else {
-                        token.push_back(c);
-                        i++;
-                    }
-                } else {
-                    token.push_back(c);
-                    i++;
-                }
-            } else if (c == '"') {
-                // Handle closing quote and avoid extra quotes at the end
-                if (i + 1 < line.size() && !isspace(line[i+1])) {
-                    state = OUT;
-                    i++;
-                } else {
-                    token.push_back(c);
-                    state = OUT;
-                    i++;
-                }
-            } else {
-                token.push_back(c);
-                i++;
+            continue;
+        }
+
+        // Handle spaces inside quotes
+        if (c == ' ' && inSingle) {
+            // Allow spaces inside single quotes but collapse extra spaces outside
+            if (!lastWasSpace) {
+                currentWord.push_back(c);
+                lastWasSpace = true;
             }
-        } else if (state == IN_SINGLE) {
-            if (c == '\'') {
-                state = OUT;
-                i++; // skip the closing single quote
-            } else {
-                if (isspace(c)) {
-                    // Collapse consecutive spaces inside single quotes: add one space if not already at the end.
-                    if (token.empty() || token.back() != ' ')
-                        token.push_back(' ');
-                    i++;
-                    while (i < line.size() && isspace(line[i]))
-                        i++;
-                } else {
-                    token.push_back(c);
-                    i++;
-                }
+            continue;
+        }
+
+        // Handle spaces outside quotes (merging words when necessary)
+        if (c == ' ' && !inSingle && !inDouble) {
+            if (lastWasSpace) continue;  // Skip multiple spaces
+            if (!currentWord.empty()) {
+                out.append(currentWord);
+                currentWord.clear();
             }
+            out.push_back(' ');
+            lastWasSpace = true;
+        } else {
+            currentWord.push_back(c);
+            lastWasSpace = false;
         }
     }
-    flushToken();
-    return result;
+
+    // Append the final word if any
+    if (!currentWord.empty()) {
+        out.append(currentWord);
+    }
+
+    return out;
 }
 
 
