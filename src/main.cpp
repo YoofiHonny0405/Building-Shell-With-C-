@@ -62,24 +62,12 @@ std::string unescapePath(const std::string &path) {
     bool inSingle = false, inDouble = false;
     for (size_t i = 0; i < path.size(); ++i) {
         char c = path[i];
-        if (c == '\'' && !inDouble) {
-            inSingle = !inSingle;
-            result.push_back(c);  // Keep the single quote
-            continue;
-        }
-        if (c == '"' && !inSingle) {
-            inDouble = !inDouble;
-            continue;
-        }
-        if (c == '\\' && inSingle) {
-            result.push_back(c);  // Preserve backslash within single quotes
-            continue;
-        }
+        if (c == '\'' && !inDouble) { inSingle = !inSingle; continue; }
+        if (c == '"' && !inSingle) { inDouble = !inDouble; continue; }
         result.push_back(c);
     }
     return result;
 }
-
 
 std::string findExecutable(const std::string &command) {
     const char* pathEnv = std::getenv("PATH");
