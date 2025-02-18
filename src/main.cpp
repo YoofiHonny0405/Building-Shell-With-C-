@@ -200,18 +200,7 @@ int main() {
                 waitpid(pid, &status, 0);
             }
         }
-        if (command == "cd") {
-            if (cmd.args.size() < 2) {
-                std::cerr << "cd: missing argument" << std::endl;
-            } else {
-                std::string targetDir = unescapePath(cmd.args[1]);
-                if (chdir(targetDir.c_str()) != 0) {
-                    std::cerr << "cd: " << strerror(errno) << std::endl;
-                }
-            }
-            continue;
-        }
-        
+        // ... other builtin commands ...
         else {
             pid_t pid = fork();
             if(pid==-1) {
