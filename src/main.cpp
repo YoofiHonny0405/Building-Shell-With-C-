@@ -121,17 +121,13 @@ std::string processEchoLine(const std::string &line) {
                 // Do not output the opening single quote
                 i++;
             } else if (c == '\\') {
-                // Outside quotes, if backslash precedes a double quote, per tests output two double quotes.
-                if (i + 1 < line.size() && line[i+1] == '"') {
-                    token.append("\"\""); 
+                // Handle backslashes outside quotes properly
+                if (i + 1 < line.size() && (line[i+1] == '"' || line[i+1] == '\\')) {
+                    token.push_back(line[i+1]); 
                     i += 2;
                 } else {
-                    if (i+1 < line.size()) {
-                        token.push_back(line[i+1]);
-                        i += 2;
-                    } else {
-                        i++;
-                    }
+                    token.push_back(c);
+                    i++;
                 }
             } else {
                 token.push_back(c);
@@ -153,14 +149,11 @@ std::string processEchoLine(const std::string &line) {
                     i++;
                 }
             } else if (c == '"') {
-                // Check next character:
+                // Handle closing quote and avoid extra quotes at the end
                 if (i + 1 < line.size() && !isspace(line[i+1])) {
-                    // If the closing quote is immediately followed by non‐whitespace,
-                    // drop it (so that the quoted segment concatenates with the following text).
                     state = OUT;
-                    i++; 
+                    i++;
                 } else {
-                    // Otherwise, output the closing quote.
                     token.push_back(c);
                     state = OUT;
                     i++;
