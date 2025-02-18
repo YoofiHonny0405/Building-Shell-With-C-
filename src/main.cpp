@@ -89,32 +89,76 @@ std::string trim(const std::string &s) {
     return s.substr(start, end - start + 1);
 }
 
-std::string processEchoLine(const std::string& line) {
-    std::string result;
-    std::istringstream stream(line);
-    std::string word;
-    bool inSingleQuote = false;
+std::string processEchoLine(const std::string &line) {
+    std::string trimmed = trim(line);
+    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
+        return trimmed.substr(1, trimmed.size() - 2);
 
-    while (stream >> std::quoted(word)) {
-        // Remove outer single quotes
-        if (word.front() == '\'' && word.back() == '\'') {
-            word = word.substr(1, word.size() - 2);
+    std::string out;
+    bool inDouble = false, inSingle = false, escaped = false;
+    bool lastWasSpace = false;  // Flag to handle spacing
+    std::string currentWord;
+
+    for (size_t i = 0; i < line.size(); i++) {
+        char c = line[i];
+
+        if (escaped) {
+            currentWord.push_back(c);
+            escaped = false;
+            continue;
         }
-        // Remove inner single quotes
-        word.erase(std::remove(word.begin(), word.end(), '\''), word.end());
-        // Append the processed word to the result
-        if (!result.empty()) {
-            result += ' ';
+
+        if (c == '\\') {  // Handle escape sequence
+            escaped = true;
+            continue;
         }
-        result += word;
+
+        if (c == '"' && !inSingle) {  // Toggle double quote state
+            inDouble = !inDouble;
+            continue;
+        }
+
+        if (c == '\'' && !inDouble) {  // Toggle single quote state
+            // Case 1: Skip single quote followed by a space
+            if (inSingle && i + 1 < line.size() && line[i + 1] == ' ') {
+                out.push_back(' ');  // Add the space and skip the quote
+                i++;  // Skip the space after the quote
+            }
+            // Case 2: Skip consecutive single quotes (like ''), no need to append
+            else if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
+                i++;  // Skip the second single quote
+            } else {
+                inSingle = !inSingle;  // Toggle single quotes
+            }
+            continue;
+        }
+
+        // Handle spaces inside quotes
+        if (c == ' ' && inSingle) {
+            continue;  // Ignore extra spaces inside single quotes
+        }
+
+        // Handle spaces outside quotes (merging words when necessary)
+        if (c == ' ' && !inSingle && !inDouble) {
+            if (lastWasSpace) continue;  // Skip multiple spaces
+            if (!currentWord.empty()) {
+                out.append(currentWord);
+                currentWord.clear();
+            }
+            out.push_back(' ');
+            lastWasSpace = true;
+        } else {
+            currentWord.push_back(c);
+            lastWasSpace = false;
+        }
     }
 
-    // Collapse multiple spaces into a single space
-    result.erase(std::unique(result.begin(), result.end(), [](char lhs, char rhs) {
-        return std::isspace(lhs) && std::isspace(rhs);
-    }), result.end());
+    // Append the final word if any
+    if (!currentWord.empty()) {
+        out.append(currentWord);
+    }
 
-    return result;
+    return out;
 }
 
 
@@ -123,8 +167,7 @@ int main(){
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd"};
-    std::string output = processEchoLine(builtins);
-    std::cout << output << std::endl;
+    
     while(true){
         std::cout << "$ ";
         std::string input;
