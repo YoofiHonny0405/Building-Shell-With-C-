@@ -210,7 +210,7 @@ void handleTypeCommand(const std::string& command, const std::unordered_set<std:
         if (!path.empty()) {
             std::cout << command << " is " << path << std::endl;
         } else {
-            std::cerr << "type: command not found" << std::endl;
+            std::cerr << command << ": not found" << std::endl;
         }
     }
 }
