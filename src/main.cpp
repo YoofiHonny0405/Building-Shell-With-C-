@@ -123,7 +123,7 @@ int main(){
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd"};
-    std::string output = processEchoLine(input);
+    std::string output = processEchoLine(builtins);
     std::cout << output << std::endl;
     while(true){
         std::cout << "$ ";
