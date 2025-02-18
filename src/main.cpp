@@ -269,6 +269,7 @@ int main() {
             pid_t pid = fork();
             if(pid == 0) {
                 if(!cmd.outputFile.empty()) {
+                    fs::create_directories(fs::path(cmd.outputFile).parent_path());
                     int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
                     if(fd != -1) {
                         dup2(fd, STDOUT_FILENO);
@@ -276,6 +277,7 @@ int main() {
                     }
                 }
                 if(!cmd.errorFile.empty()) {
+                    fs::create_directories(fs::path(cmd.errorFile).parent_path());
                     int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
                     if(fd != -1) {
                         dup2(fd, STDERR_FILENO);
@@ -302,6 +304,7 @@ int main() {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if(pid == 0) {
                 if(!cmd.outputFile.empty()) {
+                    fs::create_directories(fs::path(cmd.outputFile).parent_path());
                     int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
                     if(fd != -1) {
                         dup2(fd, STDOUT_FILENO);
@@ -309,6 +312,7 @@ int main() {
                     }
                 }
                 if(!cmd.errorFile.empty()) {
+                    fs::create_directories(fs::path(cmd.errorFile).parent_path());
                     int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
                     if(fd != -1) {
                         dup2(fd, STDERR_FILENO);
