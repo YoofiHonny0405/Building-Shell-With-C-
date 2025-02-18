@@ -94,16 +94,13 @@ std::string trim(const std::string &s) {
 
 std::string processEchoLine(const std::string &line) {
     std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
-        return trimmed.substr(1, trimmed.size() - 2);
-
     std::string out;
-    bool inDouble = false, inSingle = false, escaped = false;
+    bool inSingle = false, inDouble = false, escaped = false;
     bool lastWasSpace = false;  // Flag to handle spacing
     std::string currentWord;
 
-    for (size_t i = 0; i < line.size(); i++) {
-        char c = line[i];
+    for (size_t i = 0; i < trimmed.size(); i++) {
+        char c = trimmed[i];
 
         if (escaped) {
             currentWord.push_back(c);
@@ -121,20 +118,21 @@ std::string processEchoLine(const std::string &line) {
             continue;
         }
 
-        if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Handle cases where there are two consecutive single quotes (like 'test''world')
-            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                // Skip the second single quote
-                i++;  
+        if (c == '\'' && !inDouble) {  // Handle single quote
+            if (inSingle) {
+                inSingle = false;  // Closing single quote
             } else {
-                inSingle = !inSingle;  // Toggle single quotes
+                inSingle = true;   // Opening single quote
             }
             continue;
         }
 
-        // Handle spaces inside quotes
         if (c == ' ' && inSingle) {
-            // Ignore extra spaces inside single quotes
+            // Skip the extra spaces inside single quotes (reduce to one space)
+            if (!lastWasSpace) {
+                currentWord.push_back(c);
+                lastWasSpace = true;
+            }
             continue;
         }
 
