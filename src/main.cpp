@@ -95,6 +95,7 @@ std::string trim(const std::string &s) {
 struct Command {
     std::vector<std::string> args;
     std::string outputFile;
+    std::string errorFile;
 };
 
 Command parseCommand(const std::string& input) {
@@ -105,6 +106,11 @@ Command parseCommand(const std::string& input) {
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = unescapePath(tokens[i + 1]);
+                i++; // Skip the next token as it's the filename
+            }
+        } else if (token == "2>") {
+            if (i + 1 < tokens.size()) {
+                cmd.errorFile = unescapePath(tokens[i + 1]);
                 i++; // Skip the next token as it's the filename
             }
         } else {
@@ -253,9 +259,16 @@ int main() {
                         close(fd);
                     }
                 }
+                if(!cmd.errorFile.empty()) {
+                    int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                    if(fd != -1) {
+                        dup2(fd, STDERR_FILENO);
+                        close(fd);
+                    }
+                }
                 std::string echoArg;
                 for (size_t i = 1; i < cmd.args.size(); ++i) {
-                    if (cmd.args[i] == ">" || cmd.args[i] == "1>") break;
+                    if (cmd.args[i] == ">" || cmd.args[i] == "1>" || cmd.args[i] == "2>") break;
                     echoArg += cmd.args[i] + " ";
                 }
                 echoArg = trim(echoArg);
@@ -276,6 +289,13 @@ int main() {
                     int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
                     if(fd != -1) {
                         dup2(fd, STDOUT_FILENO);
+                        close(fd);
+                    }
+                }
+                if(!cmd.errorFile.empty()) {
+                    int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                    if(fd != -1) {
+                        dup2(fd, STDERR_FILENO);
                         close(fd);
                     }
                 }
