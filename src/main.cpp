@@ -73,15 +73,23 @@ std::string unescapePath(const std::string &path) {
 std::string findExecutable(const std::string &command) {
     const char* pathEnv = std::getenv("PATH");
     if (!pathEnv) return "";
+    
     std::istringstream iss(pathEnv);
     std::string path;
+    
     while (std::getline(iss, path, ':')) {
+        if (path.empty()) continue;
+        
         std::string fullPath = path + "/" + command;
-        if (access(fullPath.c_str(), X_OK) == 0)
+        
+        // Check if file exists and is executable
+        if (access(fullPath.c_str(), F_OK | X_OK) == 0) {
             return fullPath;
+        }
     }
     return "";
 }
+
 
 std::string trim(const std::string &s) {
     size_t start = s.find_first_not_of(" \t\r\n");
