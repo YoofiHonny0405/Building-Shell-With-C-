@@ -194,17 +194,19 @@ int main() {
         std::cout << "$ ";
         std::string input;
         std::getline(std::cin, input);
-        if(input=="exit 0") break;
+        if(input == "exit 0") break;
+
         Command cmd = parseCommand(input);
         if(cmd.args.empty()) continue;
+
         std::string command = unescapePath(cmd.args[0]);
 
-        if (cmd.args[0] == "cd") {
+        if (command == "cd") {
             handleCdCommand(cmd.args);
-            return;
+            continue; // Skip further processing for "cd"
         }
-        
-        if(command=="echo") {
+
+        if(command == "echo") {
             pid_t pid = fork();
             if(pid == 0) {
                 if(!cmd.outputFile.empty()) {
@@ -227,13 +229,12 @@ int main() {
                 waitpid(pid, &status, 0);
             }
         }
-        // ... other builtin commands ...
+        // ... handle other builtins or external commands ...
         else {
             pid_t pid = fork();
-            if(pid==-1) {
+            if(pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
-            }
-            else if(pid==0) {
+            } else if(pid == 0) {
                 if(!cmd.outputFile.empty()) {
                     int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
                     if(fd != -1) {
@@ -248,15 +249,14 @@ int main() {
                     execArgs.push_back(arg_copy);
                 }
                 execArgs.push_back(nullptr);
-                if(execvp(execArgs[0], execArgs.data())==-1) {
+                if(execvp(execArgs[0], execArgs.data()) == -1) {
                     std::cerr << command << ": command not found" << std::endl;
                     for(char* arg : execArgs) {
                         if(arg) free(arg);
                     }
                     exit(EXIT_FAILURE);
                 }
-            }
-            else {
+            } else {
                 int status;
                 waitpid(pid, &status, 0);
             }
