@@ -119,12 +119,12 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // If we encounter a space between single quotes, treat as a regular space
+            // Handle case for space between single quotes and remove the quotes
             if (inSingle && i + 1 < line.size() && line[i + 1] == ' ') {
-                out.push_back(' ');  // Add space when there is space between single quotes
-                i++; // Skip the space
+                out.push_back(' ');  // Add the space
+                i++;  // Skip the space after the quote
             } else if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                // Skip consecutive single quotes
+                // Skip consecutive single quotes (like ''), no need to append
                 i++;
             } else {
                 inSingle = !inSingle;  // Toggle single quotes
@@ -159,7 +159,6 @@ std::string processEchoLine(const std::string &line) {
 
     return out;
 }
-
 
 
 int main(){
