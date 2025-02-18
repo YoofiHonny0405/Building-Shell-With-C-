@@ -165,7 +165,6 @@ std::string processEchoLine(const std::string &line) {
 
 void handleCdCommand(const std::vector<std::string>& args) {
     std::string targetDir;
-    
     // If no argument is provided, go to the home directory
     if (args.size() < 2) {
         const char* home = std::getenv("HOME");
@@ -178,13 +177,11 @@ void handleCdCommand(const std::vector<std::string>& args) {
     } else {
         targetDir = args[1];
     }
-    
     // Attempt to change directory
     if (chdir(targetDir.c_str()) != 0) {
         std::cerr << "cd: " << strerror(errno) << std::endl;
     }
 }
-
 
 int main() {
     std::cout << std::unitbuf;
@@ -195,17 +192,13 @@ int main() {
         std::string input;
         std::getline(std::cin, input);
         if(input == "exit 0") break;
-
         Command cmd = parseCommand(input);
         if(cmd.args.empty()) continue;
-
         std::string command = unescapePath(cmd.args[0]);
-
         if (command == "cd") {
             handleCdCommand(cmd.args);
             continue; // Skip further processing for "cd"
         }
-
         if(command == "echo") {
             pid_t pid = fork();
             if(pid == 0) {
