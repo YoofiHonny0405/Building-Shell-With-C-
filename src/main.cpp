@@ -90,10 +90,6 @@ std::string trim(const std::string &s) {
 }
 
 std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
-        return trimmed.substr(1, trimmed.size() - 2);
-
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
     bool lastWasSpace = false;  // Flag to handle spacing
@@ -119,17 +115,7 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Case 1: Skip single quote followed by a space
-            if (inSingle && i + 1 < line.size() && line[i + 1] == ' ') {
-                out.push_back(' ');  // Add the space and skip the quote
-                i++;  // Skip the space after the quote
-            }
-            // Case 2: Skip consecutive single quotes (like ''), no need to append
-            else if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                i++;  // Skip the second single quote
-            } else {
-                inSingle = !inSingle;  // Toggle single quotes
-            }
+            inSingle = !inSingle;
             continue;
         }
 
@@ -160,6 +146,7 @@ std::string processEchoLine(const std::string &line) {
 
     return out;
 }
+
 
 
 
