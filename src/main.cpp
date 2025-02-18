@@ -32,16 +32,13 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
         }
         if (c == '\\') { 
             escapeNext = true; 
-            token.push_back(c); 
             continue; 
         }
         if (c == '\'' && !inDouble) { 
             inSingle = !inSingle; 
-            token.push_back(c); 
         }
         else if (c == '"' && !inSingle) { 
             inDouble = !inDouble; 
-            token.push_back(c); 
         }
         else if (c == delimiter && !inSingle && !inDouble) { 
             if (!token.empty()) { 
