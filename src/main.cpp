@@ -91,6 +91,8 @@ std::string trim(const std::string &s) {
 
 std::string processEchoLine(const std::string &line) {
     std::string trimmed = trim(line);
+    
+    // If the line is wrapped with single quotes, strip them off
     if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
         return trimmed.substr(1, trimmed.size() - 2);
 
@@ -119,7 +121,7 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Case 1: Handle consecutive single quotes (like '')
+            // Handle consecutive single quotes like ''
             if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
                 i++;  // Skip the second single quote
             } else {
@@ -128,12 +130,13 @@ std::string processEchoLine(const std::string &line) {
             continue;
         }
 
-        // Handle spaces inside quotes
+        // Handle spaces inside single quotes (they should be preserved)
         if (c == ' ' && inSingle) {
-            continue;  // Ignore extra spaces inside single quotes
+            currentWord.push_back(c);  // Space inside single quotes is allowed
+            continue;
         }
 
-        // Handle spaces outside quotes (merging words when necessary)
+        // Handle spaces outside quotes
         if (c == ' ' && !inSingle && !inDouble) {
             if (lastWasSpace) continue;  // Skip multiple spaces
             if (!currentWord.empty()) {
