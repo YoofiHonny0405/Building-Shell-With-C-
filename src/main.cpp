@@ -94,21 +94,29 @@ std::string processEchoLine(const std::string &line) {
     bool inSingle = false;
     bool inDouble = false;
     bool escaped = false;
-    bool isOuterSingle = (line.front() == '\'' && line.back() == '\'');
 
-    for (size_t i = 0; i < line.size(); ++i) {
+    // Track if the entire line is wrapped in double quotes
+    bool isOuterDouble = (line.front() == '"' && line.back() == '"');
+    size_t start = isOuterDouble ? 1 : 0;
+    size_t end = isOuterDouble ? line.size() - 1 : line.size();
+
+    for (size_t i = start; i < end; ++i) {
         char c = line[i];
 
         // Handle escape sequences
         if (escaped) {
+            // If escaped character is a single quote, keep it escaped
+            if (c == '\'' || c == '"' || c == '\\') {
+                out.push_back('\\');
+            }
             out.push_back(c);
             escaped = false;
             continue;
         }
 
+        // Detect backslashes for escape sequences
         if (c == '\\') {
             escaped = true;
-            out.push_back(c);  // Preserve backslash
             continue;
         }
 
@@ -121,11 +129,6 @@ std::string processEchoLine(const std::string &line) {
 
         // Handle single quotes
         if (c == '\'' && !inDouble) {
-            // Skip the outermost single quotes
-            if (isOuterSingle && (i == 0 || i == line.size() - 1)) {
-                continue;
-            }
-            // Otherwise, preserve the single quote
             out.push_back(c);
             continue;
         }
@@ -134,6 +137,10 @@ std::string processEchoLine(const std::string &line) {
         out.push_back(c);
     }
 
+    // If the entire line was wrapped in double quotes, re-wrap it
+    if (isOuterDouble) {
+        return "\"" + out + "\"";
+    }
     return out;
 }
 
