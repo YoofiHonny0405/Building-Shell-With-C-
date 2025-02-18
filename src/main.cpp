@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cctype>
 
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -89,56 +90,57 @@ std::string trim(const std::string &s) {
     return s.substr(start, end - start + 1);
 }
 
-std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    if (trimmed.empty()) return "";
 
-    std::string out;
-    bool inDouble = false, inSingle = false, escaped = false;
-    std::string currentWord;
+
+// Revised processEchoLine using proper tokenization with quoting rules.
+std::string processEchoLine(const std::string &line) {
+    std::string token;
+    std::vector<std::string> tokens;
+    bool inSingle = false, inDouble = false, escapeNext = false;
 
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
 
-        if (escaped) {
-            currentWord.push_back(c);
-            escaped = false;
+        if (escapeNext) {
+            token.push_back(c);
+            escapeNext = false;
             continue;
         }
-
-        if (c == '\\') {  // Handle escape sequence
-            escaped = true;
+        if (c == '\\') {
+            escapeNext = true;
             continue;
         }
-
-        if (c == '"' && !inSingle) {  // Toggle double quote state
-            inDouble = !inDouble;
-            continue;
-        }
-
-        if (c == '\'' && !inDouble) {  // Toggle single quote state
+        if (c == '\'' && !inDouble) {
             inSingle = !inSingle;
-            continue;
+            continue; // Do not add the single quote character.
         }
-
-        // Handle spaces outside of quotes
-        if (c == ' ' && !inSingle && !inDouble) {
-            if (!currentWord.empty()) {
-                out.append(currentWord);
-                currentWord.clear();
+        if (c == '"' && !inSingle) {
+            inDouble = !inDouble;
+            continue; // Do not add the double quote character.
+        }
+        // Outside any quotes, spaces act as delimiters.
+        if (std::isspace(static_cast<unsigned char>(c)) && !inSingle && !inDouble) {
+            if (!token.empty()) {
+                tokens.push_back(token);
+                token.clear();
             }
-            out.push_back(' ');
         } else {
-            currentWord.push_back(c);
+            token.push_back(c);
         }
     }
-
-    // Append the final word if any
-    if (!currentWord.empty()) {
-        out.append(currentWord);
+    if (!token.empty()) {
+        tokens.push_back(token);
     }
 
-    return out;
+    // Join tokens with a single space.
+    std::string result;
+    for (size_t i = 0; i < tokens.size(); i++) {
+        if (i > 0)
+            result.push_back(' ');
+        result.append(tokens[i]);
+    }
+    
+    return result;
 }
 
 
