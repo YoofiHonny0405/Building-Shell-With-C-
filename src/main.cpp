@@ -89,68 +89,74 @@ std::string trim(const std::string &s) {
     return s.substr(start, end - start + 1);
 }
 
-// Helper for double-quoted tokens: process escapes inside double quotes.
-std::string parseDoubleQuotedContent(const std::string &s) {
-    std::string result;
-    bool escaped = false;
-    for (char c : s) {
-        if (escaped) {
-            result.push_back(c);
-            escaped = false;
-        } else if (c == '\\') {
-            escaped = true;
-        } else {
-            result.push_back(c);
-        }
-    }
-    return result;
-}
-
-// Helper for single-quoted tokens: remove the outer quotes and then remove all single quotes inside.
-std::string parseSingleQuotedContent(const std::string &s) {
-    // Remove the first and last character (the outer quotes)
-    std::string inner = s.substr(1, s.size() - 2);
-    std::string result;
-    for (char c : inner) {
-        if (c != '\'') {
-            result.push_back(c);
-        }
-    }
-    return result;
-}
-
-// Our new processEchoLine() that uses the split tokens and then cleans them.
 std::string processEchoLine(const std::string &line) {
     std::string trimmed = trim(line);
-    
-    // If the entire echo argument is enclosed in matching quotes, process it as one token.
-    if (trimmed.size() >= 2 && trimmed.front() == '"' && trimmed.back() == '"') {
-        std::string inner = trimmed.substr(1, trimmed.size() - 2);
-        return parseDoubleQuotedContent(inner);
-    }
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'') {
-        return parseSingleQuotedContent(trimmed);
-    }
-    
-    // Otherwise, split the line (your split() function handles quotes/escapes) into tokens.
-    std::vector<std::string> tokens = split(trimmed, ' ');
-    std::string result;
-    bool first = true;
-    for (auto &token : tokens) {
-        std::string processed = token;
-        if (processed.size() >= 2 && processed.front() == '"' && processed.back() == '"') {
-            processed = parseDoubleQuotedContent(processed.substr(1, processed.size() - 2));
-        } else if (processed.size() >= 2 && processed.front() == '\'' && processed.back() == '\'') {
-            processed = parseSingleQuotedContent(processed);
-        }
-        if (!first)
-            result.push_back(' ');
-        result.append(processed);
-        first = false;
-    }
-    return result;
-}
+    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
+        return trimmed.substr(1, trimmed.size() - 2);
 
+    std::string out;
+    bool inDouble = false, inSingle = false, escaped = false;
+    bool lastWasSpace = false;  // Flag to handle spacing
+    std::string currentWord;
+
+    for (size_t i = 0; i < line.size(); i++) {
+        char c = line[i];
+
+        if (escaped) {
+            currentWord.push_back(c);
+            escaped = false;
+            continue;
+        }
+
+        if (c == '\\') {  // Handle escape sequence
+            escaped = true;
+            continue;
+        }
+
+        if (c == '"' && !inSingle) {  // Toggle double quote state
+            inDouble = !inDouble;
+            continue;
+        }
+
+        if (c == '\'' && !inDouble) {  // Toggle single quote state
+            // Handle cases where there are two consecutive single quotes (like 'test''world')
+            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
+                // Skip the second single quote
+                i++;  
+            } else {
+                inSingle = !inSingle;  // Toggle single quotes
+            }
+            continue;
+        }
+
+        // Handle spaces inside quotes
+        if (c == ' ' && inSingle) {
+            // Ignore extra spaces inside single quotes
+            continue;
+        }
+
+        // Handle spaces outside quotes (merging words when necessary)
+        if (c == ' ' && !inSingle && !inDouble) {
+            if (lastWasSpace) continue;  // Skip multiple spaces
+            if (!currentWord.empty()) {
+                out.append(currentWord);
+                currentWord.clear();
+            }
+            out.push_back(' ');
+            lastWasSpace = true;
+        } else {
+            currentWord.push_back(c);
+            lastWasSpace = false;
+        }
+    }
+
+    // Append the final word if any
+    if (!currentWord.empty()) {
+        out.append(currentWord);
+    }
+
+    return out;
+}
 
 
 int main(){
