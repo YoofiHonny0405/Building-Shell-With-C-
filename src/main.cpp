@@ -15,6 +15,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <termios.h>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -237,14 +238,44 @@ void handleTypeCommand(const std::string& command, const std::unordered_set<std:
     }
 }
 
+std::string autocomplete(const std::string& input, const std::unordered_set<std::string>& builtins) {
+    for (const auto& builtin : builtins) {
+        if (builtin.find(input) == 0) {
+            return builtin + " ";
+        }
+    }
+    return input;
+}
+
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd"};
+
+    // Set terminal to raw mode to handle TAB key press
+    termios oldt, newt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
     while(true) {
         std::cout << "$ ";
         std::string input;
-        std::getline(std::cin, input);
+        char c;
+        while (std::cin.get(c)) {
+            if (c == '\n') {
+                input.push_back(c);
+                break;
+            } else if (c == '\t') {
+                input = autocomplete(input, builtins);
+                std::cout << "\r$ " << input;
+                std::cout.flush();
+            } else {
+                input.push_back(c);
+            }
+        }
+
         if(input == "exit 0") break;
         Command cmd = parseCommand(input);
         if(cmd.args.empty()) continue;
@@ -347,5 +378,9 @@ int main() {
             }
         }
     }
+
+    // Restore terminal settings
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
     return 0;
 }
