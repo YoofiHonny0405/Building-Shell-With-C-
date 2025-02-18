@@ -263,7 +263,8 @@ int main() {
         std::cout << "$ ";
         std::string input;
         char c;
-        while (std::cin.get(c)) {
+        while (true) {
+            c = getchar();
             if (c == '\n') {
                 input.push_back(c);
                 break;
@@ -271,8 +272,16 @@ int main() {
                 input = autocomplete(input, builtins);
                 std::cout << "\r$ " << input;
                 std::cout.flush();
+            } else if (c == 127) { // Handle backspace
+                if (!input.empty()) {
+                    input.pop_back();
+                    std::cout << "\r$ " << input;
+                    std::cout.flush();
+                }
             } else {
                 input.push_back(c);
+                std::cout << c;
+                std::cout.flush();
             }
         }
 
