@@ -89,40 +89,63 @@ std::string trim(const std::string &s) {
     return s.substr(start, end - start + 1);
 }
 
-// Helper: if a token is entirely enclosed in matching quotes, remove them and all quote characters inside.
-std::string removeEnclosingQuotes(const std::string &token) {
-    if (token.size() >= 2) {
-        char first = token.front();
-        char last = token.back();
-        if ((first == '\'' && last == '\'') || (first == '"' && last == '"')) {
-            std::string res;
-            // Remove all occurrences of the quote character from the inner portion.
-            for (size_t i = 1; i < token.size() - 1; i++) {
-                if (token[i] != first)
-                    res.push_back(token[i]);
-            }
-            return res;
+// Helper for double-quoted tokens: process escapes inside double quotes.
+std::string parseDoubleQuotedContent(const std::string &s) {
+    std::string result;
+    bool escaped = false;
+    for (char c : s) {
+        if (escaped) {
+            result.push_back(c);
+            escaped = false;
+        } else if (c == '\\') {
+            escaped = true;
+        } else {
+            result.push_back(c);
         }
     }
-    return token;
+    return result;
 }
 
+// Helper for single-quoted tokens: remove the outer quotes and then remove all single quotes inside.
+std::string parseSingleQuotedContent(const std::string &s) {
+    // Remove the first and last character (the outer quotes)
+    std::string inner = s.substr(1, s.size() - 2);
+    std::string result;
+    for (char c : inner) {
+        if (c != '\'') {
+            result.push_back(c);
+        }
+    }
+    return result;
+}
+
+// Our new processEchoLine() that uses the split tokens and then cleans them.
 std::string processEchoLine(const std::string &line) {
-    // First, split the line using your existing split() function.
-    std::vector<std::string> tokens = split(line, ' ');
+    std::string trimmed = trim(line);
     
-    // For each token, if it is entirely enclosed in quotes, remove them.
-    for (auto &token : tokens) {
-        token = removeEnclosingQuotes(token);
+    // If the entire echo argument is enclosed in matching quotes, process it as one token.
+    if (trimmed.size() >= 2 && trimmed.front() == '"' && trimmed.back() == '"') {
+        std::string inner = trimmed.substr(1, trimmed.size() - 2);
+        return parseDoubleQuotedContent(inner);
+    }
+    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'') {
+        return parseSingleQuotedContent(trimmed);
     }
     
-    // Rejoin tokens with a single space (only if there was whitespace between them).
+    // Otherwise, split the line (your split() function handles quotes/escapes) into tokens.
+    std::vector<std::string> tokens = split(trimmed, ' ');
     std::string result;
     bool first = true;
-    for (const auto &token : tokens) {
+    for (auto &token : tokens) {
+        std::string processed = token;
+        if (processed.size() >= 2 && processed.front() == '"' && processed.back() == '"') {
+            processed = parseDoubleQuotedContent(processed.substr(1, processed.size() - 2));
+        } else if (processed.size() >= 2 && processed.front() == '\'' && processed.back() == '\'') {
+            processed = parseSingleQuotedContent(processed);
+        }
         if (!first)
             result.push_back(' ');
-        result.append(token);
+        result.append(processed);
         first = false;
     }
     return result;
