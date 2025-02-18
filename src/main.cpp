@@ -94,6 +94,7 @@ std::string processEchoLine(const std::string &line) {
     bool inSingle = false;
     bool inDouble = false;
     bool escaped = false;
+    bool isOuterSingle = (line.front() == '\'' && line.back() == '\'');
 
     for (size_t i = 0; i < line.size(); ++i) {
         char c = line[i];
@@ -107,22 +108,24 @@ std::string processEchoLine(const std::string &line) {
 
         if (c == '\\') {
             escaped = true;
+            out.push_back(c);  // Preserve backslash
             continue;
         }
 
         // Handle double quotes
         if (c == '"' && !inSingle) {
             inDouble = !inDouble;
+            out.push_back(c);
             continue;
         }
 
         // Handle single quotes
         if (c == '\'' && !inDouble) {
-            // If starting or ending a quote, skip it
-            if (i == 0 || i == line.size() - 1) {
+            // Skip the outermost single quotes
+            if (isOuterSingle && (i == 0 || i == line.size() - 1)) {
                 continue;
             }
-            // If it's not at the start or end, it's a literal single quote
+            // Otherwise, preserve the single quote
             out.push_back(c);
             continue;
         }
