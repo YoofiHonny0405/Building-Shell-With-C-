@@ -90,69 +90,47 @@ std::string trim(const std::string &s) {
 }
 
 std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
-        return trimmed.substr(1, trimmed.size() - 2);
-
     std::string out;
-    bool inDouble = false, inSingle = false, escaped = false;
-    bool lastWasSpace = false;  // Flag to handle spacing
-    std::string currentWord;
+    bool inDouble = false, inSingle = false;
+    std::string currentSegment;
 
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
 
-        if (escaped) {
-            currentWord.push_back(c);
-            escaped = false;
+        // Toggle single quotes
+        if (c == '\'' && !inDouble) {  
+            inSingle = !inSingle;
+            // If closing a single quote, append the segment as-is
+            if (!inSingle) {
+                out.append(currentSegment);
+                currentSegment.clear();
+            }
             continue;
         }
 
-        if (c == '\\') {  // Handle escape sequence
-            escaped = true;
-            continue;
-        }
-
-        if (c == '"' && !inSingle) {  // Toggle double quote state
+        // Toggle double quotes
+        if (c == '"' && !inSingle) {  
             inDouble = !inDouble;
             continue;
         }
 
-        if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Handle cases where there are two consecutive single quotes (like 'test''world')
-            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                // Skip the second single quote
-                i++;  
-            } else {
-                inSingle = !inSingle;  // Toggle single quotes
-            }
-            continue;
-        }
-
-        // Handle spaces inside quotes
-        if (c == ' ' && inSingle) {
-            // Ignore extra spaces inside single quotes
-            continue;
-        }
-
-        // Handle spaces outside quotes (merging words when necessary)
+        // If outside quotes, preserve spaces
         if (c == ' ' && !inSingle && !inDouble) {
-            if (lastWasSpace) continue;  // Skip multiple spaces
-            if (!currentWord.empty()) {
-                out.append(currentWord);
-                currentWord.clear();
+            if (!currentSegment.empty()) {
+                out.append(currentSegment);
+                currentSegment.clear();
             }
             out.push_back(' ');
-            lastWasSpace = true;
-        } else {
-            currentWord.push_back(c);
-            lastWasSpace = false;
+            continue;
         }
+
+        // Collect characters for current segment
+        currentSegment.push_back(c);
     }
 
-    // Append the final word if any
-    if (!currentWord.empty()) {
-        out.append(currentWord);
+    // Append any remaining segment
+    if (!currentSegment.empty()) {
+        out.append(currentSegment);
     }
 
     return out;
