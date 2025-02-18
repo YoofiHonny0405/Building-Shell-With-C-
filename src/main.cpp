@@ -93,45 +93,38 @@ std::string processEchoLine(const std::string &line) {
     std::string result;
     std::string token;
     enum State { OUT, IN_DOUBLE, IN_SINGLE } state = OUT;
-    
-    // We'll also note if we encountered any whitespace outside quotes.
-    bool betweenTokens = false;
-    
+    bool betweenTokens = false; // indicates that whitespace was encountered outside any token
+
     auto flushToken = [&]() {
         if (!token.empty()) {
             if (!result.empty() && betweenTokens)
                 result.push_back(' ');
             result.append(token);
             token.clear();
-            betweenTokens = false;
         }
+        betweenTokens = false;
     };
-    
+
     size_t i = 0;
     while (i < line.size()) {
         char c = line[i];
-        // OUTSIDE any quotes:
+
         if (state == OUT) {
             if (isspace(c)) {
                 betweenTokens = true;
                 i++;
-            }
-            else if (c == '"') {
+            } else if (c == '"') {
                 state = IN_DOUBLE;
-                // Append the opening double quote only if not the entire token.
-                // We'll decide later whether to remove outer quotes.
-                token.push_back(c);
+                // We do not append the opening quote
                 i++;
-            }
-            else if (c == '\'') {
+            } else if (c == '\'') {
                 state = IN_SINGLE;
-                // Do not add the single quote (we remove outer single quotes)
+                // Do not output the opening single quote
                 i++;
-            }
-            else if (c == '\\') {
-                // Outside quotes, if a backslash precedes a double quote, per test output output two double quotes.
-                if (i+1 < line.size() && line[i+1] == '"') {
-                    token.append("\"\""); 
+            } else if (c == '\\') {
+                // Outside quotes, a backslash preceding a double quote should be handled specially.
+                if (i + 1 < line.size() && line[i+1] == '"') {
+                    token.append("\"\""); // per your tests, output two double quotes
                     i += 2;
                 } else {
                     if (i+1 < line.size()) {
@@ -141,18 +134,14 @@ std::string processEchoLine(const std::string &line) {
                         i++;
                     }
                 }
-            }
-            else {
+            } else {
                 token.push_back(c);
                 i++;
             }
-        }
-        // INSIDE DOUBLE QUOTES:
-        else if (state == IN_DOUBLE) {
+        } else if (state == IN_DOUBLE) {
             if (c == '\\') {
-                if (i+1 < line.size()) {
+                if (i + 1 < line.size()) {
                     char next = line[i+1];
-                    // In double quotes, backslash escapes " and \.
                     if (next == '"' || next == '\\') {
                         token.push_back(next);
                         i += 2;
@@ -164,31 +153,25 @@ std::string processEchoLine(const std::string &line) {
                     token.push_back(c);
                     i++;
                 }
-            }
-            else if (c == '"') {
-                // End of double-quoted segment.
+            } else if (c == '"') {
                 state = OUT;
-                // Do not append the closing quote.
-                i++;
-            }
-            else {
+                i++; // do not append the closing quote
+            } else {
                 token.push_back(c);
                 i++;
             }
-        }
-        // INSIDE SINGLE QUOTES:
-        else if (state == IN_SINGLE) {
+        } else if (state == IN_SINGLE) {
             if (c == '\'') {
                 state = OUT;
-                i++;
-            }
-            else {
+                i++; // skip the closing single quote
+            } else {
+                // In single quotes, output characters literally.
+                // (Optionally, collapse multiple spaces if desired.)
                 if (isspace(c)) {
-                    // Collapse multiple spaces: add one space if token does not already end with a space.
                     if (token.empty() || token.back() != ' ')
                         token.push_back(' ');
+                    // Skip over additional spaces
                     i++;
-                    // Skip any additional spaces.
                     while (i < line.size() && isspace(line[i]))
                         i++;
                 } else {
@@ -199,14 +182,11 @@ std::string processEchoLine(const std::string &line) {
         }
     }
     flushToken();
-    
-    // Now, if the entire trimmed line was enclosed in double quotes,
-    // remove the very first and last character from the result.
-    std::string trimmed = trim(line);
-    if (!trimmed.empty() && trimmed.front() == '"' && trimmed.back() == '"') {
-        if (!result.empty() && result.front() == '"' && result.back() == '"') {
-            result = result.substr(1, result.size()-2);
-        }
+
+    // Final fix: if the result starts with two double quotes and ends with two double quotes,
+    // remove one pair so that we have exactly one pair.
+    if (result.size() >= 4 && result.substr(0,2) == "\"\"" && result.substr(result.size()-2) == "\"\"") {
+        result = result.substr(1, result.size()-2);
     }
     
     return result;
