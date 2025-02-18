@@ -90,72 +90,48 @@ std::string trim(const std::string &s) {
 }
 
 std::string processEchoLine(const std::string &line) {
-    std::string trimmed = trim(line);
-    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
-        return trimmed.substr(1, trimmed.size() - 2);
-
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
-    bool lastWasSpace = false;  // Flag to handle spacing
-    std::string currentWord;
+    bool lastWasSpace = false;
 
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
 
         if (escaped) {
-            currentWord.push_back(c);
+            out.push_back(c);
             escaped = false;
             continue;
         }
 
-        if (c == '\\') {  // Handle escape sequence
+        if (c == '\\') {
             escaped = true;
             continue;
         }
 
-        if (c == '"' && !inSingle) {  // Toggle double quote state
+        if (c == '"' && !inSingle) {
             inDouble = !inDouble;
             continue;
         }
 
-        if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Case 1: Skip single quote followed by a space
-            if (inSingle && i + 1 < line.size() && line[i + 1] == ' ') {
-                out.push_back(' ');  // Add the space and skip the quote
-                i++;  // Skip the space after the quote
-            }
-            // Case 2: Skip consecutive single quotes (like ''), no need to append
-            else if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                i++;  // Skip the second single quote
-            } else {
-                inSingle = !inSingle;  // Toggle single quotes
-            }
+        if (c == '\'' && !inDouble) {
+            inSingle = !inSingle;
             continue;
         }
 
-        // Handle spaces inside quotes
-        if (c == ' ' && inSingle) {
-            continue;  // Ignore extra spaces inside single quotes
-        }
-
-        // Handle spaces outside quotes (merging words when necessary)
         if (c == ' ' && !inSingle && !inDouble) {
-            if (lastWasSpace) continue;  // Skip multiple spaces
-            if (!currentWord.empty()) {
-                out.append(currentWord);
-                currentWord.clear();
+            if (!lastWasSpace) {
+                out.push_back(c);
+                lastWasSpace = true;
             }
-            out.push_back(' ');
-            lastWasSpace = true;
         } else {
-            currentWord.push_back(c);
+            out.push_back(c);
             lastWasSpace = false;
         }
     }
 
-    // Append the final word if any
-    if (!currentWord.empty()) {
-        out.append(currentWord);
+    // Trim trailing spaces
+    while (!out.empty() && out.back() == ' ') {
+        out.pop_back();
     }
 
     return out;
