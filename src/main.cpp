@@ -303,7 +303,7 @@ int main() {
                     echoArg += cmd.args[i] + " ";
                 }
                 echoArg = trim(echoArg);  // Trim any extra spaces
-                std::cout << processEchoLine(echoArg) << std::endl();  // Print the result to the appropriate file (stdout or stderr)
+                std::cout << processEchoLine(echoArg) << std::endl;   // Print the result to the appropriate file (stdout or stderr)
         
                 exit(0);
             } else {
