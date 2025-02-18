@@ -100,7 +100,7 @@ std::string processEchoLine(const std::string &line) {
 
         // Handle escape sequences
         if (escaped) {
-            out.push_back(c);  // Preserve the escaped character
+            out.push_back(c);
             escaped = false;
             continue;
         }
@@ -110,14 +110,19 @@ std::string processEchoLine(const std::string &line) {
             continue;
         }
 
-        // Toggle state for double quotes but do not add them to output
+        // Handle double quotes
         if (c == '"' && !inSingle) {
             inDouble = !inDouble;
             continue;
         }
 
-        // Toggle state for single quotes but keep them in output
+        // Handle single quotes
         if (c == '\'' && !inDouble) {
+            // If starting or ending a quote, skip it
+            if (i == 0 || i == line.size() - 1) {
+                continue;
+            }
+            // If it's not at the start or end, it's a literal single quote
             out.push_back(c);
             continue;
         }
