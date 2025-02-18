@@ -25,16 +25,19 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     bool inSingle = false, inDouble = false, escapeNext = false;
     for (size_t i = 0; i < str.size(); ++i) {
         char c = str[i];
+        
         if (escapeNext) { 
             token.push_back(c); 
             escapeNext = false; 
             continue; 
         }
+
         if (c == '\\') { 
             escapeNext = true; 
             token.push_back(c); 
             continue; 
         }
+
         if (c == '\'' && !inDouble) { 
             inSingle = !inSingle; 
             token.push_back(c); 
