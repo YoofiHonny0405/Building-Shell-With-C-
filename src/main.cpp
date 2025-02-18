@@ -89,53 +89,40 @@ std::string trim(const std::string &s) {
     return s.substr(start, end - start + 1);
 }
 
+
 std::string processEchoLine(const std::string &line) {
-    std::string out;
-    bool inSingle = false;
-    std::string currentWord;
+    std::string result;
+    std::istringstream stream(line);
+    std::string token;
+    bool inSingleQuote = false;
 
-    for (size_t i = 0; i < line.size(); ++i) {
-        char c = line[i];
-
-        if (c == '\'' && !inSingle) {
-            // Enter single-quoted section
-            inSingle = true;
-            continue;
-        } else if (c == '\'' && inSingle) {
-            // Exit single-quoted section
-            inSingle = false;
-            if (i + 1 < line.size() && line[i + 1] == '\'') {
-                // Handle consecutive single quotes (e.g., '')
-                out.push_back('\'');
-                ++i; // Skip the next single quote
-            }
-            continue;
+    while (stream >> std::quoted(token)) {
+        // Remove leading and trailing spaces
+        size_t start = token.find_first_not_of(' ');
+        size_t end = token.find_last_not_of(' ');
+        if (start != std::string::npos && end != std::string::npos) {
+            token = token.substr(start, end - start + 1);
         }
 
-        if (inSingle) {
-            // Inside single quotes: accumulate characters
-            currentWord.push_back(c);
+        // If inside single quotes, append without adding extra space
+        if (inSingleQuote) {
+            result += token;
         } else {
-            if (c == ' ') {
-                if (!currentWord.empty()) {
-                    out.append(currentWord);
-                    currentWord.clear();
-                }
-                out.push_back(' ');
-            } else {
-                currentWord.push_back(c);
+            // If not inside single quotes, add a space before appending
+            if (!result.empty()) {
+                result += ' ';
             }
+            result += token;
+        }
+
+        // Toggle the inSingleQuote flag if the token starts or ends with a single quote
+        if (token.front() == '\'' && token.back() == '\'') {
+            inSingleQuote = !inSingleQuote;
         }
     }
 
-    // Append the last accumulated word if any
-    if (!currentWord.empty()) {
-        out.append(currentWord);
-    }
-
-    return out;
+    return result;
 }
-
 
 
 int main(){
