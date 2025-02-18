@@ -176,12 +176,24 @@ void handleCdCommand(const std::vector<std::string>& args) {
         }
     } else {
         targetDir = args[1];
+        // Handle '~' expansion for home directory
+        if (targetDir[0] == '~') {
+            const char* home = std::getenv("HOME");
+            if (home) {
+                targetDir = home + targetDir.substr(1); // Remove '~' and prepend home directory
+            } else {
+                std::cerr << "cd: HOME not set" << std::endl;
+                return;
+            }
+        }
     }
+
     // Attempt to change directory
     if (chdir(targetDir.c_str()) != 0) {
         std::cerr << "cd: " << strerror(errno) << std::endl;
     }
 }
+
 
 int main() {
     std::cout << std::unitbuf;
