@@ -90,13 +90,15 @@ std::string trim(const std::string &s) {
 }
 
 std::string processEchoLine(const std::string &line) {
+    std::string trimmed = trim(line);
+    if (trimmed.empty()) return trimmed;
+
     std::string out;
-    bool inDouble = false, inSingle = false, escaped = false;
-    bool lastWasSpace = false;  // Flag to handle spacing
+    bool inSingle = false, inDouble = false, escaped = false;
     std::string currentWord;
 
-    for (size_t i = 0; i < line.size(); i++) {
-        char c = line[i];
+    for (size_t i = 0; i < trimmed.size(); ++i) {
+        char c = trimmed[i];
 
         if (escaped) {
             currentWord.push_back(c);
@@ -104,49 +106,38 @@ std::string processEchoLine(const std::string &line) {
             continue;
         }
 
-        if (c == '\\') {  // Handle escape sequence
+        if (c == '\\') {
             escaped = true;
             continue;
         }
 
-        if (c == '"' && !inSingle) {  // Toggle double quote state
-            inDouble = !inDouble;
-            continue;
-        }
-
-        if (c == '\'' && !inDouble) {  // Toggle single quote state
+        if (c == '\'' && !inDouble) {
             inSingle = !inSingle;
             continue;
         }
 
-        // Handle spaces inside quotes
-        if (c == ' ' && inSingle) {
-            continue;  // Ignore extra spaces inside single quotes
+        if (c == '"' && !inSingle) {
+            inDouble = !inDouble;
+            continue;
         }
 
-        // Handle spaces outside quotes (merging words when necessary)
         if (c == ' ' && !inSingle && !inDouble) {
-            if (lastWasSpace) continue;  // Skip multiple spaces
             if (!currentWord.empty()) {
                 out.append(currentWord);
                 currentWord.clear();
             }
             out.push_back(' ');
-            lastWasSpace = true;
         } else {
             currentWord.push_back(c);
-            lastWasSpace = false;
         }
     }
 
-    // Append the final word if any
     if (!currentWord.empty()) {
         out.append(currentWord);
     }
 
     return out;
 }
-
 
 
 
