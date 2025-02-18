@@ -185,7 +185,13 @@ int main() {
                         close(fd);
                     }
                 }
-                std::string echoArg = input.substr(input.find(cmd.args[0]) + cmd.args[0].length());
+                std::string echoArg;
+                for (size_t i = 1; i < cmd.args.size(); ++i) {
+                    if (cmd.args[i] == ">" || cmd.args[i] == "1>") break;
+                     echoArg += cmd.args[i] + " ";
+                }
+                echoArg = trim(echoArg);
+
                 if(!echoArg.empty() && echoArg[0] == ' ') echoArg = echoArg.substr(1);
                 std::cout << processEchoLine(echoArg) << std::endl;
                 exit(0);
