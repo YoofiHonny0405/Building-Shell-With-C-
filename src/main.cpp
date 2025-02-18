@@ -105,10 +105,6 @@ std::string processEchoLine(const std::string &line) {
 
         // Handle escape sequences
         if (escaped) {
-            // Special case: Collapse \\' to \'
-            if (c == '\'' && inDouble) {
-                out.push_back('\\');
-            }
             out.push_back(c);
             escaped = false;
             continue;
@@ -123,12 +119,14 @@ std::string processEchoLine(const std::string &line) {
         // Handle double quotes
         if (c == '"' && !inSingle) {
             inDouble = !inDouble;
+            out.push_back(c);  // Keep the double quote in output
             continue;
         }
 
         // Handle single quotes
         if (c == '\'' && !inDouble) {
-            out.push_back(c);
+            inSingle = !inSingle;
+            out.push_back(c);  // Keep the single quote in output
             continue;
         }
 
@@ -136,7 +134,11 @@ std::string processEchoLine(const std::string &line) {
         out.push_back(c);
     }
 
-    // Return the output without double quotes around it
+    // If it was wrapped in outer double quotes, add the closing quote
+    if (isOuterDouble) {
+        out.push_back('"');
+    }
+
     return out;
 }
 
