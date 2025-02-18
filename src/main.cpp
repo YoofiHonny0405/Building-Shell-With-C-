@@ -94,60 +94,36 @@ std::string processEchoLine(const std::string &line) {
     bool inSingle = false;
     bool inDouble = false;
     bool escaped = false;
-    std::string currentWord;
 
     for (size_t i = 0; i < line.size(); ++i) {
         char c = line[i];
 
-        // Handle escape characters
+        // Handle escape sequences
         if (escaped) {
-            currentWord.push_back(c);  // Preserve the escaped character
+            out.push_back(c);  // Preserve the escaped character
             escaped = false;
             continue;
         }
 
         if (c == '\\') {
-            // Escape next character
             escaped = true;
-            currentWord.push_back(c);  // Keep the backslash for accurate reproduction
             continue;
         }
 
-        // Toggle state for double quotes
+        // Toggle state for double quotes but do not add them to output
         if (c == '"' && !inSingle) {
             inDouble = !inDouble;
-            currentWord.push_back(c); // Keep double quotes
             continue;
         }
 
-        // Toggle state for single quotes
+        // Toggle state for single quotes but keep them in output
         if (c == '\'' && !inDouble) {
-            // End of a quoted section, append the current word
-            inSingle = !inSingle;
-            continue; // Do not include single quotes themselves
+            out.push_back(c);
+            continue;
         }
 
-        // Handle spaces outside quotes
-        if (c == ' ' && !inSingle && !inDouble) {
-            if (!currentWord.empty()) {
-                out.append(currentWord);
-                currentWord.clear();
-                out.push_back(' ');  // Add a space between words
-            }
-        } else {
-            // Collect non-space characters
-            currentWord.push_back(c);
-        }
-    }
-
-    // Append the last word if any
-    if (!currentWord.empty()) {
-        out.append(currentWord);
-    }
-
-    // Trim trailing spaces
-    if (!out.empty() && out.back() == ' ') {
-        out.pop_back();
+        // Collect all other characters
+        out.push_back(c);
     }
 
     return out;
