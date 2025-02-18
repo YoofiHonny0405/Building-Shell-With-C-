@@ -91,9 +91,12 @@ std::string trim(const std::string &s) {
 
 std::string processEchoLine(const std::string &line) {
     std::string trimmed = trim(line);
+    if (trimmed.size() >= 2 && trimmed.front() == '\'' && trimmed.back() == '\'')
+        return trimmed.substr(1, trimmed.size() - 2);
+
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
-    bool lastWasSpace = false;
+    bool lastWasSpace = false;  // Flag to handle spacing
     std::string currentWord;
 
     for (size_t i = 0; i < line.size(); i++) {
@@ -116,16 +119,14 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Check if there is space between single quotes, and handle accordingly
+            // If we encounter a space between single quotes, treat as a regular space
             if (inSingle && i + 1 < line.size() && line[i + 1] == ' ') {
                 out.push_back(' ');  // Add space when there is space between single quotes
                 i++; // Skip the space
-            }
-            else if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
+            } else if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
                 // Skip consecutive single quotes
                 i++;
-            }
-            else {
+            } else {
                 inSingle = !inSingle;  // Toggle single quotes
             }
             continue;
@@ -133,7 +134,7 @@ std::string processEchoLine(const std::string &line) {
 
         // Handle spaces inside quotes
         if (c == ' ' && inSingle) {
-            continue; // Ignore extra spaces inside single quotes
+            continue;  // Ignore extra spaces inside single quotes
         }
 
         // Handle spaces outside quotes (merging words when necessary)
