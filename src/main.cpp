@@ -121,7 +121,7 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Handle consecutive single quotes: treat them as empty strings
+            // Handle consecutive single quotes: treat them as empty
             if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
                 i++;  // Skip the second single quote
                 continue;  // No-op for consecutive single quotes
