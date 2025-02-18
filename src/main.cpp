@@ -96,7 +96,7 @@ std::string processEchoLine(const std::string &line) {
 
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
-    bool lastWasSpace = false;  // Flag to handle spacing
+    bool lastWasSpace = false;
     std::string currentWord;
 
     for (size_t i = 0; i < line.size(); i++) {
@@ -119,11 +119,16 @@ std::string processEchoLine(const std::string &line) {
         }
 
         if (c == '\'' && !inDouble) {  // Toggle single quote state
-            // Handle cases where there are two consecutive single quotes (like 'test''world')
-            if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
-                // Skip the second single quote and merge them
-                i++;  
-            } else {
+            // Handle the case where there is space between single quotes
+            if (inSingle && i + 1 < line.size() && line[i + 1] == ' ') {
+                out.push_back(' '); // Add a space when there is a space between single quotes
+                i++; // Skip the space between single quotes
+            }
+            else if (inSingle && i + 1 < line.size() && line[i + 1] == '\'') {
+                // Skip consecutive single quotes
+                i++;
+            }
+            else {
                 inSingle = !inSingle;  // Toggle single quotes
             }
             continue;
@@ -131,12 +136,7 @@ std::string processEchoLine(const std::string &line) {
 
         // Handle spaces inside quotes
         if (c == ' ' && inSingle) {
-            // Allow spaces inside single quotes but collapse extra spaces outside
-            if (!lastWasSpace) {
-                currentWord.push_back(c);
-                lastWasSpace = true;
-            }
-            continue;
+            continue; // Ignore extra spaces inside single quotes
         }
 
         // Handle spaces outside quotes (merging words when necessary)
