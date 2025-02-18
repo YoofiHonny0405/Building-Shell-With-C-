@@ -202,11 +202,16 @@ void handlePwdCommand() {
     }
 }
 
-void handleTypeCommand(const std::string& command) {
-    if (command == "pwd") {
-        std::cout << "pwd is a shell builtin" << std::endl;
+void handleTypeCommand(const std::string& command, const std::unordered_set<std::string>& builtins) {
+    if (builtins.find(command) != builtins.end()) {
+        std::cout << command << " is a shell builtin" << std::endl;
     } else {
-        std::cerr << "type: command not found" << std::endl;
+        std::string path = findExecutable(command);
+        if (!path.empty()) {
+            std::cout << command << " is " << path << std::endl;
+        } else {
+            std::cerr << "type: command not found" << std::endl;
+        }
     }
 }
 
@@ -232,7 +237,7 @@ int main() {
         }
         if (command == "type") {
             if (cmd.args.size() > 1) {
-                handleTypeCommand(cmd.args[1]);
+                handleTypeCommand(cmd.args[1], builtins);
             } else {
                 std::cerr << "type: missing operand" << std::endl;
             }
