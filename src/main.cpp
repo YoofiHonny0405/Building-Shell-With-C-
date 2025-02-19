@@ -307,45 +307,41 @@ int main() {
         }
         if(command == "echo") {
             pid_t pid = fork();
-            if (pid == 0) {  // Child process
-                if (!cmd.outputFile.empty()) {
-                    fs::create_directories(fs::path(cmd.outputFile).parent_path());
+            if(pid == 0) {
+                // Handle output redirection
+                if(!cmd.outputFile.empty()) {
+                    fs::path outputPath(cmd.outputFile);
+                    fs::create_directories(outputPath.parent_path());  // Create directories if they don't exist
                     int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
-                    if (fd != -1) {
-                        dup2(fd, STDOUT_FILENO);
-                        close(fd);
+                    if(fd == -1) {
+                        std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);  // Exit if file couldn't be opened
                     }
-                }
-            
-                // Insert this block for error redirection (2>> handling)
-                if (!cmd.errorFile.empty()) {
-                    fs::create_directories(fs::path(cmd.errorFile).parent_path());
-                    int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
-                    if (fd == -1) {
-                        std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
-                        exit(EXIT_FAILURE);
-                    }
-                    dup2(fd, STDERR_FILENO);  // Redirect stderr to file
+                    dup2(fd, STDOUT_FILENO);  // Redirect stdout to the file
                     close(fd);
                 }
-            
-                std::vector<char*> execArgs;
-                for (const auto& arg : cmd.args) {
-                    std::string unescaped = unescapePath(arg);
-                    char* arg_copy = strdup(unescaped.c_str());
-                    execArgs.push_back(arg_copy);
-                }
-                execArgs.push_back(nullptr);
-            
-                if (execvp(execArgs[0], execArgs.data()) == -1) {
-                    std::cerr << cmd.args[0] << ": command not found" << std::endl;
-                    for (char* arg : execArgs) {
-                        if (arg) free(arg);
+                // Handle error redirection
+                if(!cmd.errorFile.empty()) {
+                    fs::path errorPath(cmd.errorFile);
+                    fs::create_directories(errorPath.parent_path());  // Create directories if they don't exist
+                    int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
+                    if(fd == -1) {
+                        std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);  // Exit if file couldn't be opened
                     }
-                    exit(EXIT_FAILURE);
+                    dup2(fd, STDERR_FILENO);  // Redirect stderr to the file
+                    close(fd);
                 }
-            }
-             else {
+                // Prepare the string to echo
+                std::string echoArg;
+                for (size_t i = 1; i < cmd.args.size(); ++i) {
+                    if (cmd.args[i] == ">" || cmd.args[i] == "1>" || cmd.args[i] == "2>" || cmd.args[i] == "1>>" || cmd.args[i] == "2>>") break;
+                    echoArg += cmd.args[i] + " ";
+                }
+                echoArg = trim(echoArg);  // Trim any extra spaces
+                std::cout << processEchoLine(echoArg) << std::endl;  // Print the result to the appropriate file (stdout or stderr)
+                exit(0);
+            } else {
                 int status;
                 waitpid(pid, &status, 0);  // Wait for the child process to finish
             }
