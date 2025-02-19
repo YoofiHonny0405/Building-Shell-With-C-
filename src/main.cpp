@@ -348,43 +348,52 @@ int main() {
         }
         else {
             pid_t pid = fork();
-            if(pid == -1) {
-                std::cerr << "Failed to fork process" << std::endl;
-            } else if(pid == 0) {
-                if(!cmd.outputFile.empty()) {
-                    fs::create_directories(fs::path(cmd.outputFile).parent_path());
-                    int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
-                    if(fd != -1) {
-                        dup2(fd, STDOUT_FILENO);
-                        close(fd);
-                    }
-                }
-                if(!cmd.errorFile.empty()) {
-                    fs::create_directories(fs::path(cmd.errorFile).parent_path());
-                    int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
-                    if(fd != -1) {
-                        dup2(fd, STDERR_FILENO);
-                        close(fd);
-                    }
-                }
-                std::vector<char*> execArgs;
-                for(const auto& arg : cmd.args) {
-                    std::string unescaped = unescapePath(arg);
-                    char* arg_copy = strdup(unescaped.c_str());
-                    execArgs.push_back(arg_copy);
-                }
-                execArgs.push_back(nullptr);
-                if(execvp(execArgs[0], execArgs.data()) == -1) {
-                    std::cerr << command << ": command not found" << std::endl;
-                    for(char* arg : execArgs) {
-                        if(arg) free(arg);
-                    }
-                    exit(EXIT_FAILURE);
-                }
-            } else {
-                int status;
-                waitpid(pid, &status, 0);
-            }
+if (pid == -1) {
+    std::cerr << "Failed to fork process" << std::endl;
+} else if (pid == 0) {  // Child process
+    // Handle output redirection (stdout)
+    if (!cmd.outputFile.empty()) {
+        fs::create_directories(fs::path(cmd.outputFile).parent_path());
+        int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
+        if (fd != -1) {
+            dup2(fd, STDOUT_FILENO);
+            close(fd);
+        }
+    }
+    
+    // Handle error redirection (stderr)
+    if (!cmd.errorFile.empty()) {
+        fs::path errorPath(cmd.errorFile);
+        fs::create_directories(errorPath.parent_path());  // Ensure directories exist
+        int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
+        if (fd == -1) {
+            std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
+            exit(EXIT_FAILURE);  // Exit if file couldn't be opened
+        }
+        dup2(fd, STDERR_FILENO);  // Redirect stderr to the file
+        close(fd);
+    }
+
+    // Prepare and execute command
+    std::vector<char*> execArgs;
+    for (const auto& arg : cmd.args) {
+        std::string unescaped = unescapePath(arg);
+        char* arg_copy = strdup(unescaped.c_str());
+        execArgs.push_back(arg_copy);
+    }
+    execArgs.push_back(nullptr);
+    if (execvp(execArgs[0], execArgs.data()) == -1) {
+        std::cerr << cmd.args[0] << ": command not found" << std::endl;
+        for (char* arg : execArgs) {
+            if (arg) free(arg);
+        }
+        exit(EXIT_FAILURE);
+    }
+} else {  // Parent process
+    int status;
+    waitpid(pid, &status, 0);
+}
+
         }
     }
 
