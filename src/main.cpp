@@ -360,17 +360,17 @@ int main() {
                     }
                 }
                 if(!cmd.errorFile.empty()) {
-                    fs::path errorPath(cmd.errorFile);
-                    fs::create_directories(errorPath.parent_path());  // Ensure directory exists
-                
-                    int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
-                    if(fd == -1) {
-                        std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
-                        exit(EXIT_FAILURE);
-                    }
-                
-                    dup2(fd, STDERR_FILENO);  // Redirect stderr to file
-                    close(fd);
+                    fs::path outputPath(cmd.outputFile);
+fs::create_directories(outputPath.parent_path());
+
+int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
+if (out_fd == -1) {
+    std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
+    exit(EXIT_FAILURE);
+}
+dup2(out_fd, STDOUT_FILENO);
+close(out_fd);
+
                 }
                 
                 std::vector<char*> execArgs;
