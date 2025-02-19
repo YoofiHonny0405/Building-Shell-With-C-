@@ -360,13 +360,19 @@ int main() {
                     }
                 }
                 if(!cmd.errorFile.empty()) {
-                    fs::create_directories(fs::path(cmd.errorFile).parent_path());
+                    fs::path errorPath(cmd.errorFile);
+                    fs::create_directories(errorPath.parent_path());  // Ensure directory exists
+                
                     int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
-                    if(fd != -1) {
-                        dup2(fd, STDERR_FILENO);
-                        close(fd);
+                    if(fd == -1) {
+                        std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
                     }
+                
+                    dup2(fd, STDERR_FILENO);  // Redirect stderr to file
+                    close(fd);
                 }
+                
                 std::vector<char*> execArgs;
                 for(const auto& arg : cmd.args) {
                     std::string unescaped = unescapePath(arg);
