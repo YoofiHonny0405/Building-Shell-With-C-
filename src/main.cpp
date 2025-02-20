@@ -309,17 +309,27 @@ int main() {
             pid_t pid = fork();
             if(pid == 0) {
                 // Handle output redirection
-                if(!cmd.outputFile.empty()) {
+                if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
-                    fs::create_directories(outputPath.parent_path());  // Create directories if they don't exist
-                    int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
-                    if(fd == -1) {
-                        std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
-                        exit(EXIT_FAILURE);  // Exit if file couldn't be opened
+                    
+                    // Ensure the directory exists before opening the output file
+                    if (!fs::exists(outputPath.parent_path()) && !fs::create_directories(outputPath.parent_path())) {
+                        std::cerr << "Failed to create directory for output file: " << outputPath.parent_path() << std::endl;
+                        exit(EXIT_FAILURE);
                     }
-                    dup2(fd, STDOUT_FILENO);  // Redirect stdout to the file
-                    close(fd);
+                
+                    int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | 
+                                      (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
+                
+                    if (out_fd == -1) {
+                        std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+                
+                    dup2(out_fd, STDOUT_FILENO);
+                    close(out_fd);
                 }
+                
                 // Handle error redirection
                 if(!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
