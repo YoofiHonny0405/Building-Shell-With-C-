@@ -311,25 +311,20 @@ int main() {
                 // Handle output redirection
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
-                    
                     // Ensure the directory exists before opening the output file
                     if (!fs::exists(outputPath.parent_path()) && !fs::create_directories(outputPath.parent_path())) {
                         std::cerr << "Failed to create directory for output file: " << outputPath.parent_path() << std::endl;
                         exit(EXIT_FAILURE);
                     }
-                
-                    int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | 
-                                      (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
-                
+                    int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC |
+                    (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
                     if (out_fd == -1) {
                         std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
                         exit(EXIT_FAILURE);
                     }
-                
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                
                 // Handle error redirection
                 if(!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
@@ -362,32 +357,27 @@ int main() {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if(pid == 0) {
                 if(!cmd.outputFile.empty()) {
-                    fs::path errorPath(cmd.errorFile);
-fs::create_directories(errorPath.parent_path());  
-
-int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
-if (err_fd == -1) {
-    std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
-    exit(EXIT_FAILURE);
-}
-dup2(err_fd, STDERR_FILENO);  
-close(err_fd);
-
+                    fs::path outputPath(cmd.outputFile);
+                    fs::create_directories(outputPath.parent_path());
+                    int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
+                    if (out_fd == -1) {
+                        std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+                    dup2(out_fd, STDOUT_FILENO);
+                    close(out_fd);
                 }
                 if(!cmd.errorFile.empty()) {
-                    fs::path outputPath(cmd.outputFile);
-fs::create_directories(outputPath.parent_path());
-
-int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
-if (out_fd == -1) {
-    std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
-    exit(EXIT_FAILURE);
-}
-dup2(out_fd, STDOUT_FILENO);
-close(out_fd);
-
+                    fs::path errorPath(cmd.errorFile);
+                    fs::create_directories(errorPath.parent_path());
+                    int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
+                    if (err_fd == -1) {
+                        std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+                    dup2(err_fd, STDERR_FILENO);
+                    close(err_fd);
                 }
-                
                 std::vector<char*> execArgs;
                 for(const auto& arg : cmd.args) {
                     std::string unescaped = unescapePath(arg);
