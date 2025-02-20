@@ -352,12 +352,17 @@ int main() {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if(pid == 0) {
                 if(!cmd.outputFile.empty()) {
-                    fs::create_directories(fs::path(cmd.outputFile).parent_path());
-                    int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
-                    if(fd != -1) {
-                        dup2(fd, STDOUT_FILENO);
-                        close(fd);
-                    }
+                    fs::path errorPath(cmd.errorFile);
+fs::create_directories(errorPath.parent_path());  
+
+int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
+if (err_fd == -1) {
+    std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
+    exit(EXIT_FAILURE);
+}
+dup2(err_fd, STDERR_FILENO);  
+close(err_fd);
+
                 }
                 if(!cmd.errorFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
