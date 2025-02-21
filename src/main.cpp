@@ -10,7 +10,7 @@
 namespace fs = std::filesystem;
 
 // Built-in commands for autocompletion
-const std::unordered_set<std::string> builtins = {"echo", "exit"};
+const std::unordered_set<std::string> builtins = {"echo", "exit", "ls", "cd", "pwd"};
 
 // Autocomplete function
 std::string autocomplete(const std::string& input) {
