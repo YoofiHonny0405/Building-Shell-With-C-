@@ -366,6 +366,7 @@ int main() {
             if(pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if(pid == 0) {
+                // Handle output redirection
                 if(!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
@@ -373,7 +374,8 @@ int main() {
                             fs::create_directories(outputPath.parent_path());
                         }
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for output file: " << outputPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for output file: " 
+                                  << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
@@ -381,9 +383,15 @@ int main() {
                         std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
                         exit(EXIT_FAILURE);
                     }
+                    // Redirect stdout
                     dup2(out_fd, STDOUT_FILENO);
+                    // If no separate error redirection was specified, redirect stderr to the same fd.
+                    if (cmd.errorFile.empty()) {
+                        dup2(out_fd, STDERR_FILENO);
+                    }
                     close(out_fd);
                 }
+                // Handle error redirection (if explicitly specified)
                 if(!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
@@ -391,7 +399,8 @@ int main() {
                             fs::create_directories(errorPath.parent_path());
                         }
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for error file: " << errorPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for error file: " 
+                                  << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
@@ -402,6 +411,7 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
+                // Prepare exec arguments
                 std::vector<char*> execArgs;
                 for(const auto& arg : cmd.args) {
                     std::string unescaped = unescapePath(arg);
@@ -421,6 +431,7 @@ int main() {
                 waitpid(pid, &status, 0);
             }
         }
+        
     }
 
     // Restore terminal settings
