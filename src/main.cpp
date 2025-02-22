@@ -105,37 +105,39 @@ Command parseCommand(const std::string& input) {
     Command cmd;
     std::vector<std::string> tokens = split(input, ' ');
     for (size_t i = 0; i < tokens.size(); ++i) {
-        std::string token = unescapePath(tokens[i]);
+        // Trim the token after unescaping to remove any extra whitespace/newlines.
+        std::string token = trim(unescapePath(tokens[i]));
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
-                cmd.outputFile = unescapePath(tokens[i + 1]);
+                cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = false;
                 i++; // Skip the next token as it's the filename
             }
         } else if (token == "1>>" || token == ">>") {
             if (i + 1 < tokens.size()) {
-                cmd.outputFile = unescapePath(tokens[i + 1]);
+                cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = true;
                 i++; // Skip the next token as it's the filename
             }
         } else if (token == "2>") {
             if (i + 1 < tokens.size()) {
-                cmd.errorFile = unescapePath(tokens[i + 1]);
+                cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = false;
                 i++; // Skip the next token as it's the filename
             }
         } else if (token == "2>>") {
             if (i + 1 < tokens.size()) {
-                cmd.errorFile = unescapePath(tokens[i + 1]);
+                cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = true;
                 i++; // Skip the next token as it's the filename
             }
         } else {
-            cmd.args.push_back(tokens[i]);
+            cmd.args.push_back(tokens[i]);  // (You may also want to trim these if desired)
         }
     }
     return cmd;
 }
+
 
 std::string processEchoLine(const std::string &line) {
     std::string out;
