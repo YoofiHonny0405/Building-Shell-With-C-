@@ -78,7 +78,6 @@ std::string findExecutable(const std::string &command) {
     while (std::getline(iss, path, ':')) {
         if (path.empty()) continue;
         std::string fullPath = path + "/" + command;
-        // Check if file exists and is executable
         if (access(fullPath.c_str(), F_OK | X_OK) == 0) {
             return fullPath;
         }
@@ -105,34 +104,33 @@ Command parseCommand(const std::string& input) {
     Command cmd;
     std::vector<std::string> tokens = split(input, ' ');
     for (size_t i = 0; i < tokens.size(); ++i) {
-        // Trim the token after unescaping to remove extra whitespace/newlines.
         std::string token = trim(unescapePath(tokens[i]));
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = false;
-                i++; // Skip the filename token
+                i++;
             }
         } else if (token == "1>>" || token == ">>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = true;
-                i++; // Skip the filename token
+                i++;
             }
         } else if (token == "2>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = false;
-                i++; // Skip the filename token
+                i++;
             }
         } else if (token == "2>>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = true;
-                i++; // Skip the filename token
+                i++;
             }
         } else {
-            cmd.args.push_back(tokens[i]);  // (You may also want to trim these if desired)
+            cmd.args.push_back(tokens[i]);
         }
     }
     return cmd;
@@ -144,17 +142,15 @@ std::string processEchoLine(const std::string &line) {
     bool lastWasSpace = false;
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
-        // Handle escape sequences
         if (escaped) {
             out.push_back(c);
             escaped = false;
             continue;
         }
-        if (c == '\\' && !inSingle) {  // Backslashes are literal in single quotes
+        if (c == '\\' && !inSingle) {
             escaped = true;
             continue;
         }
-        // Handle quotes
         if (c == '"' && !inSingle) {
             inDouble = !inDouble;
             continue;
@@ -163,7 +159,6 @@ std::string processEchoLine(const std::string &line) {
             inSingle = !inSingle;
             continue;
         }
-        // Handle spaces
         if (c == ' ') {
             if (inSingle || inDouble) {
                 out.push_back(c);
@@ -176,11 +171,9 @@ std::string processEchoLine(const std::string &line) {
             }
             continue;
         }
-        // Handle regular characters
         out.push_back(c);
         lastWasSpace = false;
     }
-    // Trim trailing spaces
     while (!out.empty() && out.back() == ' ') {
         out.pop_back();
     }
@@ -189,7 +182,6 @@ std::string processEchoLine(const std::string &line) {
 
 void handleCdCommand(const std::vector<std::string>& args) {
     std::string targetDir;
-    // If no argument is provided, go to the home directory
     if (args.size() < 2) {
         const char* home = std::getenv("HOME");
         if (home) {
@@ -200,18 +192,16 @@ void handleCdCommand(const std::vector<std::string>& args) {
         }
     } else {
         targetDir = args[1];
-        // Handle '~' expansion for home directory
         if (targetDir[0] == '~') {
             const char* home = std::getenv("HOME");
             if (home) {
-                targetDir = home + targetDir.substr(1); // Remove '~' and prepend home directory
+                targetDir = home + targetDir.substr(1);
             } else {
                 std::cerr << "cd: HOME not set" << std::endl;
                 return;
             }
         }
     }
-    // Attempt to change directory
     if (chdir(targetDir.c_str()) != 0) {
         std::cerr << "cd: " << targetDir << ": " << strerror(errno) << std::endl;
     }
@@ -253,7 +243,7 @@ int main() {
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd"};
 
-    // Set terminal to raw mode to handle TAB key press
+    // Set terminal to raw mode for TAB handling
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
@@ -276,7 +266,7 @@ int main() {
                 input = autocomplete(input, builtins);
                 std::cout << "\r$ " << input;
                 std::cout.flush();
-            } else if (c == 127) { // Handle backspace
+            } else if (c == 127) {
                 if (!input.empty()) {
                     input.pop_back();
                     std::cout << "\r$ " << input;
@@ -295,11 +285,11 @@ int main() {
         std::string command = unescapePath(cmd.args[0]);
         if (command == "cd") {
             handleCdCommand(cmd.args);
-            continue; // Skip further processing for "cd"
+            continue;
         }
         if (command == "pwd") {
             handlePwdCommand();
-            continue; // Skip further processing for "pwd"
+            continue;
         }
         if (command == "type") {
             if (cmd.args.size() > 1) {
@@ -307,18 +297,17 @@ int main() {
             } else {
                 std::cerr << "type: missing operand" << std::endl;
             }
-            continue; // Skip further processing for "type"
+            continue;
         }
         if(command == "echo") {
             pid_t pid = fork();
             if(pid == 0) {
-                // Handle output redirection
+                // Handle stdout redirection
                 if(!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
-                        if (!fs::exists(outputPath.parent_path())) {
+                        if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
-                        }
                     } catch (const fs::filesystem_error& e) {
                         std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
@@ -332,13 +321,12 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // Handle error redirection
+                // Handle stderr redirection if specified
                 if(!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
-                        if (!fs::exists(errorPath.parent_path())) {
+                        if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
-                        }
                     } catch (const fs::filesystem_error& e) {
                         std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
@@ -352,7 +340,7 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
-                // Prepare the string to echo
+                // Prepare echo argument
                 std::string echoArg;
                 for (size_t i = 1; i < cmd.args.size(); ++i) {
                     if (cmd.args[i] == ">" || cmd.args[i] == "1>" ||
@@ -366,8 +354,7 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                std::fflush(stderr);
-                std::cout << std::endl;
+                std::cout << std::endl; 
             }
         }
         else {
@@ -375,13 +362,12 @@ int main() {
             if(pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if(pid == 0) {
-                // Handle output redirection (stdout)
+                // Handle stdout redirection
                 if(!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
-                        if (!fs::exists(outputPath.parent_path())) {
+                        if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
-                        }
                     } catch (const fs::filesystem_error& e) {
                         std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
@@ -395,13 +381,12 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // Handle error redirection (stderr) only if explicitly specified
+                // Handle stderr redirection if specified
                 if(!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
-                        if (!fs::exists(errorPath.parent_path())) {
+                        if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
-                        }
                     } catch (const fs::filesystem_error& e) {
                         std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
@@ -432,8 +417,7 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                std::fflush(stderr);
-                std::cout << std::endl;
+                std::cout << std::endl; 
             }
         }
     }
