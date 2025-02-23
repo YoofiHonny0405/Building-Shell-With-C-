@@ -311,8 +311,6 @@ int main() {
             pid_t pid = fork();
             if(pid == 0) {
                 // Handle output redirection
-                if (!cmd.outputFile.empty()) {
-                    fs::path outputPath(cmd.outputFile);
                if(!cmd.outputFile.empty()) {
     fs::path outputPath(cmd.outputFile);
     try {
