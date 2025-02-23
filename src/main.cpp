@@ -382,7 +382,8 @@ if(!cmd.errorFile.empty()) {
                 int status;
                 waitpid(pid, &status, 0);  // Wait for the child process to finish
             }
-        }else {
+        }
+        else {
     pid_t pid = fork();
     if(pid == -1) {
         std::cerr << "Failed to fork process" << std::endl;
@@ -447,10 +448,6 @@ if(!cmd.errorFile.empty()) {
         std::cout << std::endl;  // Ensure prompt starts on new line
     }
 }
-
-
-}
-
 
         
     }
