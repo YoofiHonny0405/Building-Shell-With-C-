@@ -400,7 +400,7 @@ if(!cmd.errorFile.empty()) {
                           << outputPath.parent_path() << " - " << e.what() << std::endl;
                 exit(EXIT_FAILURE);
             }
-            int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
+            int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
             if (out_fd == -1) {
                 std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
                 exit(EXIT_FAILURE);
@@ -448,6 +448,7 @@ if(!cmd.errorFile.empty()) {
         waitpid(pid, &status, 0);
     }
 }
+
 
         
     }
