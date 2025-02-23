@@ -105,31 +105,31 @@ Command parseCommand(const std::string& input) {
     Command cmd;
     std::vector<std::string> tokens = split(input, ' ');
     for (size_t i = 0; i < tokens.size(); ++i) {
-        // Trim the token after unescaping to remove any extra whitespace/newlines.
+        // Trim the token after unescaping to remove extra whitespace/newlines.
         std::string token = trim(unescapePath(tokens[i]));
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = false;
-                i++; // Skip the next token as it's the filename
+                i++; // Skip the filename token
             }
         } else if (token == "1>>" || token == ">>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = true;
-                i++; // Skip the next token as it's the filename
+                i++; // Skip the filename token
             }
         } else if (token == "2>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = false;
-                i++; // Skip the next token as it's the filename
+                i++; // Skip the filename token
             }
         } else if (token == "2>>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = true;
-                i++; // Skip the next token as it's the filename
+                i++; // Skip the filename token
             }
         } else {
             cmd.args.push_back(tokens[i]);  // (You may also want to trim these if desired)
@@ -261,7 +261,7 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while(true) {
-        // Print prompt exactly as "$ " (without preceding newline)
+        // Print prompt exactly as "$ "
         std::cout << "$ ";
         std::cout.flush();
 
@@ -366,7 +366,8 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                std::cout << std::endl; // Ensure prompt on new line
+                std::fflush(stderr);
+                std::cout << std::endl;
             }
         }
         else {
@@ -431,7 +432,8 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                std::cout << std::endl; // Ensure prompt on new line
+                std::fflush(stderr);
+                std::cout << std::endl;
             }
         }
     }
