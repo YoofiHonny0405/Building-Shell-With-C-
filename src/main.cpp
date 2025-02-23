@@ -254,7 +254,6 @@ int main() {
         // Clear current line and print prompt exactly as "$ "
         std::cout << "\r\033[K$ ";
         std::cout.flush();
-
         std::string input;
         char c;
         while (true) {
@@ -309,8 +308,8 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for output file: " 
-                                  << outputPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for output file: "
+                        << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
@@ -328,8 +327,8 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for error file: " 
-                                  << errorPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for error file: "
+                        << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
@@ -370,8 +369,8 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for output file: " 
-                                  << outputPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for output file: "
+                        << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
@@ -389,8 +388,8 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for error file: " 
-                                  << errorPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for error file: "
+                        << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
@@ -426,5 +425,6 @@ int main() {
 
     // Restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
     return 0;
 }
