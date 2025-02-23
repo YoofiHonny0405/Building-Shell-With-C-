@@ -251,7 +251,7 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while(true) {
-        // Clear the current line and print prompt exactly as "$ "
+        // Clear current line and print prompt exactly as "$ "
         std::cout << "\r\033[K$ ";
         std::cout.flush();
 
@@ -340,7 +340,7 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
-                // Prepare echo argument
+                // Prepare the string to echo
                 std::string echoArg;
                 for (size_t i = 1; i < cmd.args.size(); ++i) {
                     if (cmd.args[i] == ">" || cmd.args[i] == "1>" ||
@@ -354,7 +354,7 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                // Print a newline after the child process finishes
+                std::fflush(stderr);
                 std::cout << std::endl;
             }
         }
@@ -418,6 +418,7 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
+                std::fflush(stderr);
                 std::cout << std::endl;
             }
         }
@@ -425,6 +426,5 @@ int main() {
 
     // Restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-
     return 0;
 }
