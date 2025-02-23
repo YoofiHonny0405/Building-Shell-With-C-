@@ -105,34 +105,34 @@ Command parseCommand(const std::string& input) {
     Command cmd;
     std::vector<std::string> tokens = split(input, ' ');
     for (size_t i = 0; i < tokens.size(); ++i) {
-        // Trim the token after unescaping to remove any extra whitespace/newlines.
+        // Trim the token after unescaping to remove extra whitespace/newlines.
         std::string token = trim(unescapePath(tokens[i]));
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = false;
-                i++; // Skip the next token as it's the filename
+                i++; // Skip the filename token
             }
         } else if (token == "1>>" || token == ">>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = true;
-                i++; // Skip the next token as it's the filename
+                i++; // Skip the filename token
             }
         } else if (token == "2>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = false;
-                i++; // Skip the next token as it's the filename
+                i++; // Skip the filename token
             }
         } else if (token == "2>>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = true;
-                i++; // Skip the next token as it's the filename
+                i++; // Skip the filename token
             }
         } else {
-            cmd.args.push_back(tokens[i]);  // (You may also want to trim these if desired)
+            cmd.args.push_back(tokens[i]);  // (You may trim these if desired)
         }
     }
     return cmd;
@@ -261,7 +261,8 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while(true) {
-        std::cout << "$ ";
+        // Always start a new line before printing the prompt
+        std::cout << std::endl << "$ ";
         std::string input;
         char c;
         while (true) {
@@ -317,8 +318,8 @@ int main() {
                             fs::create_directories(outputPath.parent_path());
                         }
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for output file: "
-                        << outputPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for output file: " 
+                                  << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
@@ -337,8 +338,8 @@ int main() {
                             fs::create_directories(errorPath.parent_path());
                         }
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for error file: "
-                        << errorPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for error file: " 
+                                  << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
@@ -352,15 +353,18 @@ int main() {
                 // Prepare the string to echo
                 std::string echoArg;
                 for (size_t i = 1; i < cmd.args.size(); ++i) {
-                    if (cmd.args[i] == ">" || cmd.args[i] == "1>" || cmd.args[i] == "2>" || cmd.args[i] == "1>>" || cmd.args[i] == "2>>") break;
+                    if (cmd.args[i] == ">" || cmd.args[i] == "1>" ||
+                        cmd.args[i] == "2>" || cmd.args[i] == "1>>" || cmd.args[i] == "2>>")
+                        break;
                     echoArg += cmd.args[i] + " ";
                 }
-                echoArg = trim(echoArg);  // Trim any extra spaces
-                std::cout << processEchoLine(echoArg) << std::endl;  // Print the result to the appropriate file (stdout or stderr)
+                echoArg = trim(echoArg);
+                std::cout << processEchoLine(echoArg) << std::endl;
                 exit(0);
             } else {
                 int status;
-                waitpid(pid, &status, 0);  // Wait for the child process to finish
+                waitpid(pid, &status, 0);
+                std::cout << std::endl;
             }
         }
         else {
@@ -376,8 +380,8 @@ int main() {
                             fs::create_directories(outputPath.parent_path());
                         }
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for output file: "
-                        << outputPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for output file: " 
+                                  << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
@@ -396,8 +400,8 @@ int main() {
                             fs::create_directories(errorPath.parent_path());
                         }
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for error file: "
-                        << errorPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for error file: " 
+                                  << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
@@ -425,7 +429,7 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                std::cout << std::endl;  // Ensure prompt starts on new line
+                std::cout << std::endl;
             }
         }
     }
