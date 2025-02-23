@@ -443,10 +443,12 @@ if(!cmd.errorFile.empty()) {
             }
             exit(EXIT_FAILURE);
         }
-    } else {
-        int status;
-        waitpid(pid, &status, 0);
-    }
+                } else {
+                int status;
+                waitpid(pid, &status, 0);
+                std::cout << std::endl;
+            }
+
 }
 
 
