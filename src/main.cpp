@@ -382,8 +382,7 @@ if(!cmd.errorFile.empty()) {
                 int status;
                 waitpid(pid, &status, 0);  // Wait for the child process to finish
             }
-        }
-        else {
+        }else {
     pid_t pid = fork();
     if(pid == -1) {
         std::cerr << "Failed to fork process" << std::endl;
@@ -400,7 +399,7 @@ if(!cmd.errorFile.empty()) {
                           << outputPath.parent_path() << " - " << e.what() << std::endl;
                 exit(EXIT_FAILURE);
             }
-            int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
+            int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
             if (out_fd == -1) {
                 std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
                 exit(EXIT_FAILURE);
@@ -428,7 +427,6 @@ if(!cmd.errorFile.empty()) {
             dup2(err_fd, STDERR_FILENO);
             close(err_fd);
         }
-        // Prepare exec arguments
         std::vector<char*> execArgs;
         for(const auto& arg : cmd.args) {
             std::string unescaped = unescapePath(arg);
@@ -443,11 +441,13 @@ if(!cmd.errorFile.empty()) {
             }
             exit(EXIT_FAILURE);
         }
-                } else {
-                int status;
-                waitpid(pid, &status, 0);
-                std::cout << std::endl;
-            }
+    } else {
+        int status;
+        waitpid(pid, &status, 0);
+        std::cout << std::endl;  // Ensure prompt starts on new line
+    }
+}
+
 
 }
 
