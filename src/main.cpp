@@ -251,8 +251,8 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while(true) {
-        // Print prompt exactly as "$ "
-        std::cout << "$ ";
+        // Clear the current line and print prompt exactly as "$ "
+        std::cout << "\r\033[K$ ";
         std::cout.flush();
 
         std::string input;
@@ -264,12 +264,12 @@ int main() {
                 break;
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                std::cout << "\r$ " << input;
+                std::cout << "\r\033[K$ " << input;
                 std::cout.flush();
-            } else if (c == 127) {
+            } else if (c == 127) { // Handle backspace
                 if (!input.empty()) {
                     input.pop_back();
-                    std::cout << "\r$ " << input;
+                    std::cout << "\r\033[K$ " << input;
                     std::cout.flush();
                 }
             } else {
@@ -354,7 +354,8 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                std::cout << std::endl; 
+                // Print a newline after the child process finishes
+                std::cout << std::endl;
             }
         }
         else {
@@ -417,7 +418,7 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                std::cout << std::endl; 
+                std::cout << std::endl;
             }
         }
     }
