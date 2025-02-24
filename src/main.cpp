@@ -485,7 +485,7 @@ int main() {
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
                         std::cerr << "Failed to create directory for error file: "
-                                  << errorPath.parent_path()
+                                  << errorPath.parent_path();
                                         } catch (const fs::filesystem_error &e) {
                         std::cerr << "Failed to create directory for error file: "
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
