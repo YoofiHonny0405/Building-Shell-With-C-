@@ -109,25 +109,25 @@ Command parseCommand(const std::string& input) {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = false;
-                i++;
+                i++; // Skip filename token
             }
         } else if (token == "1>>" || token == ">>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = true;
-                i++;
+                i++; // Skip filename token
             }
         } else if (token == "2>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = false;
-                i++;
+                i++; // Skip filename token
             }
         } else if (token == "2>>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = true;
-                i++;
+                i++; // Skip filename token
             }
         } else {
             cmd.args.push_back(tokens[i]);
@@ -254,6 +254,7 @@ int main() {
         // Clear current line and print prompt exactly as "$ "
         std::cout << "\r\033[K$ ";
         std::cout.flush();
+
         std::string input;
         char c;
         while (true) {
@@ -308,8 +309,8 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for output file: "
-                        << outputPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for output file: " 
+                                  << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
@@ -320,15 +321,15 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // Handle stderr redirection if specified
+                // Handle stderr redirection if specified; if not, leave stderr untouched
                 if(!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for error file: "
-                        << errorPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for error file: " 
+                                  << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
@@ -338,6 +339,13 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
+                } else {
+                    // If no error redirection is specified, redirect stderr to /dev/null
+                    int devNull = open("/dev/null", O_WRONLY);
+                    if(devNull != -1) {
+                        dup2(devNull, STDERR_FILENO);
+                        close(devNull);
+                    }
                 }
                 // Prepare the string to echo
                 std::string echoArg;
@@ -369,8 +377,8 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for output file: "
-                        << outputPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for output file: " 
+                                  << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
@@ -381,15 +389,15 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // Handle stderr redirection if specified
+                // Handle stderr redirection if specified; if not, redirect stderr to /dev/null
                 if(!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error& e) {
-                        std::cerr << "Failed to create directory for error file: "
-                        << errorPath.parent_path() << " - " << e.what() << std::endl;
+                        std::cerr << "Failed to create directory for error file: " 
+                                  << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
@@ -399,6 +407,12 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
+                } else {
+                    int devNull = open("/dev/null", O_WRONLY);
+                    if(devNull != -1) {
+                        dup2(devNull, STDERR_FILENO);
+                        close(devNull);
+                    }
                 }
                 std::vector<char*> execArgs;
                 for(const auto& arg : cmd.args) {
@@ -425,6 +439,5 @@ int main() {
 
     // Restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-
     return 0;
 }
