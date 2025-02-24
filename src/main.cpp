@@ -1,6 +1,3 @@
-I apologize for the incomplete response. Let's continue from where we left off and ensure all necessary headers are included. Here is the complete code with all the required headers:
-
-```cpp
 #include <iostream>
 #include <fstream>
 #include <string>
