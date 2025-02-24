@@ -269,17 +269,20 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
-    // Only print the prompt if STDOUT is a terminal.
+
+    // Instead of printing the prompt to STDOUT, print it to /dev/tty.
+    FILE *tty = fopen("/dev/tty", "w");
+
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
     while (true) {
-        if (isatty(STDOUT_FILENO)) {
-            std::cout << "$ ";
-            std::cout.flush();
-        }
+        // Print prompt to /dev/tty if available.
+        if (tty)
+            fprintf(tty, "$ "), fflush(tty);
         std::string input;
         char c;
         while (true) {
@@ -289,27 +292,26 @@ int main() {
                 break;
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                if (isatty(STDOUT_FILENO)) {
-                    std::cout << "\r$ " << input;
-                    std::cout.flush();
+                if (tty) {
+                    fprintf(tty, "\r$ %s", input.c_str());
+                    fflush(tty);
                 }
             } else if (c == 127) { // Handle backspace.
                 if (!input.empty()) {
                     input.pop_back();
-                    if (isatty(STDOUT_FILENO)) {
-                        std::cout << "\r$ " << input;
-                        std::cout.flush();
+                    if (tty) {
+                        fprintf(tty, "\r$ %s", input.c_str());
+                        fflush(tty);
                     }
                 }
             } else {
                 input.push_back(c);
-                if (isatty(STDOUT_FILENO)) {
-                    std::cout << c;
-                    std::cout.flush();
+                if (tty) {
+                    fputc(c, tty);
+                    fflush(tty);
                 }
             }
         }
-        // If no more input is available, break.
         if (feof(stdin))
             break;
         if (input == "exit 0\n")
@@ -343,7 +345,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: "
+                        std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -363,7 +365,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: "
+                        std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -400,7 +402,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: "
+                        std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -420,7 +422,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: "
+                        std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -464,7 +466,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: "
+                        std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -484,10 +486,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: "
-                                  << errorPath.parent_path();
-                                        } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: "
+                        std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -530,6 +529,9 @@ int main() {
             }
         }
     }
+
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    if (tty)
+        fclose(tty);
     return 0;
 }
