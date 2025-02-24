@@ -109,25 +109,25 @@ Command parseCommand(const std::string& input) {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = false;
-                i++; // Skip filename token
+                i++;
             }
         } else if (token == "1>>" || token == ">>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendOutput = true;
-                i++; // Skip filename token
+                i++;
             }
         } else if (token == "2>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = false;
-                i++; // Skip filename token
+                i++;
             }
         } else if (token == "2>>") {
             if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[i + 1]));
                 cmd.appendError = true;
-                i++; // Skip filename token
+                i++;
             }
         } else {
             cmd.args.push_back(tokens[i]);
@@ -250,9 +250,9 @@ int main() {
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    while(true) {
-        // Clear current line and print prompt exactly as "$ "
-        std::cout << "\r\033[K$ ";
+    while (true) {
+        // Print prompt exactly as "$ " on a new line.
+        std::cout << "\n$ ";
         std::cout.flush();
 
         std::string input;
@@ -264,12 +264,12 @@ int main() {
                 break;
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                std::cout << "\r\033[K$ " << input;
+                std::cout << "\n$ " << input;
                 std::cout.flush();
             } else if (c == 127) { // Handle backspace
                 if (!input.empty()) {
                     input.pop_back();
-                    std::cout << "\r\033[K$ " << input;
+                    std::cout << "\n$ " << input;
                     std::cout.flush();
                 }
             } else {
@@ -279,9 +279,9 @@ int main() {
             }
         }
 
-        if(input == "exit 0") break;
+        if (input == "exit 0\n") break;
         Command cmd = parseCommand(input);
-        if(cmd.args.empty()) continue;
+        if (cmd.args.empty()) continue;
         std::string command = unescapePath(cmd.args[0]);
         if (command == "cd") {
             handleCdCommand(cmd.args);
@@ -299,16 +299,16 @@ int main() {
             }
             continue;
         }
-        if(command == "echo") {
+        if (command == "echo") {
             pid_t pid = fork();
-            if(pid == 0) {
+            if (pid == 0) {
                 // Handle stdout redirection
-                if(!cmd.outputFile.empty()) {
+                if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
-                    } catch (const fs::filesystem_error& e) {
+                    } catch (const fs::filesystem_error &e) {
                         std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
@@ -321,13 +321,13 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // Handle stderr redirection if specified; if not, leave stderr untouched
-                if(!cmd.errorFile.empty()) {
+                // Handle stderr redirection if specified; if not, leave stderr unchanged
+                if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
-                    } catch (const fs::filesystem_error& e) {
+                    } catch (const fs::filesystem_error &e) {
                         std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
@@ -339,13 +339,6 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
-                } else {
-                    // If no error redirection is specified, redirect stderr to /dev/null
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if(devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
                 }
                 // Prepare the string to echo
                 std::string echoArg;
@@ -367,16 +360,16 @@ int main() {
         }
         else {
             pid_t pid = fork();
-            if(pid == -1) {
+            if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
-            } else if(pid == 0) {
+            } else if (pid == 0) {
                 // Handle stdout redirection
-                if(!cmd.outputFile.empty()) {
+                if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
-                    } catch (const fs::filesystem_error& e) {
+                    } catch (const fs::filesystem_error &e) {
                         std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
@@ -389,13 +382,13 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // Handle stderr redirection if specified; if not, redirect stderr to /dev/null
-                if(!cmd.errorFile.empty()) {
+                // Handle stderr redirection if specified; if not, leave stderr unchanged
+                if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
-                    } catch (const fs::filesystem_error& e) {
+                    } catch (const fs::filesystem_error &e) {
                         std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
@@ -407,24 +400,18 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
-                } else {
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if(devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
                 }
                 std::vector<char*> execArgs;
-                for(const auto& arg : cmd.args) {
+                for (const auto& arg : cmd.args) {
                     std::string unescaped = unescapePath(arg);
                     char* arg_copy = strdup(unescaped.c_str());
                     execArgs.push_back(arg_copy);
                 }
                 execArgs.push_back(nullptr);
-                if(execvp(execArgs[0], execArgs.data()) == -1) {
+                if (execvp(execArgs[0], execArgs.data()) == -1) {
                     std::cerr << command << ": command not found" << std::endl;
-                    for(char* arg : execArgs) {
-                        if(arg) free(arg);
+                    for (char* arg : execArgs) {
+                        if (arg) free(arg);
                     }
                     exit(EXIT_FAILURE);
                 }
