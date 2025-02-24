@@ -23,7 +23,6 @@
 
 namespace fs = std::filesystem;
 
-// Splits a string by the given delimiter.
 std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -60,7 +59,6 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     return tokens;
 }
 
-// Removes surrounding quotes.
 std::string unescapePath(const std::string &path) {
     std::string result;
     bool inSingle = false, inDouble = false;
@@ -91,23 +89,10 @@ std::string findExecutable(const std::string &command) {
 
 std::string trim(const std::string &s) {
     size_t start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string::npos)
+    if(start == std::string::npos)
         return "";
     size_t end = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
-}
-
-// --- Redirection operator helpers ---
-// If token begins with op (">", ">>", "2>", "2>>"), return pair {op, remainder}.
-// If token equals op exactly, return {op, ""}.
-std::pair<std::string, std::string> splitRedirToken(const std::string &token, const std::string &op) {
-    if (token.compare(0, op.size(), op) == 0) {
-        if (token.size() == op.size())
-            return {op, ""};
-        else
-            return {op, token.substr(op.size())};
-    }
-    return {"", ""};
 }
 
 struct Command {
@@ -118,57 +103,37 @@ struct Command {
     bool appendError;
 };
 
-// Parse command line and check for redirection operators.
-// This version also handles tokens like ">>/tmp/foo/bar.md" (no space between operator and filename).
+// Simple version: redirection operators are expected as separate tokens.
 Command parseCommand(const std::string &input) {
     Command cmd;
     cmd.appendOutput = false;
     cmd.appendError = false;
     std::vector<std::string> tokens = split(input, ' ');
-    for (size_t i = 0; i < tokens.size(); ++i) {
-        std::string raw = trim(tokens[i]);
-        std::string token = trim(unescapePath(raw));
-        // Check if token starts with a redirection operator.
-        std::pair<std::string, std::string> opPair;
-        if ((opPair = splitRedirToken(token, "1>>")).first == "1>>" ||
-            opPair = splitRedirToken(token, ">>"), opPair.first == ">>") {
-            cmd.appendOutput = true;
-            if (!opPair.second.empty()) {
-                cmd.outputFile = trim(opPair.second);
-            } else if (i + 1 < tokens.size()) {
+    for (size_t i = 0; i < tokens.size(); i++) {
+        std::string token = trim(unescapePath(tokens[i]));
+        if (token == ">" || token == "1>") {
+            if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[++i]));
+                cmd.appendOutput = false;
             }
-            continue;
-        }
-        if ((opPair = splitRedirToken(token, "1>")).first == "1>") {
-            cmd.appendOutput = false;
-            if (!opPair.second.empty()) {
-                cmd.outputFile = trim(opPair.second);
-            } else if (i + 1 < tokens.size()) {
+        } else if (token == ">>" || token == "1>>") {
+            if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[++i]));
+                cmd.appendOutput = true;
             }
-            continue;
-        }
-        if ((opPair = splitRedirToken(token, "2>>")).first == "2>>") {
-            cmd.appendError = true;
-            if (!opPair.second.empty()) {
-                cmd.errorFile = trim(opPair.second);
-            } else if (i + 1 < tokens.size()) {
+        } else if (token == "2>") {
+            if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[++i]));
+                cmd.appendError = false;
             }
-            continue;
-        }
-        if ((opPair = splitRedirToken(token, "2>")).first == "2>") {
-            cmd.appendError = false;
-            if (!opPair.second.empty()) {
-                cmd.errorFile = trim(opPair.second);
-            } else if (i + 1 < tokens.size()) {
+        } else if (token == "2>>") {
+            if (i + 1 < tokens.size()) {
                 cmd.errorFile = trim(unescapePath(tokens[++i]));
+                cmd.appendError = true;
             }
-            continue;
+        } else {
+            cmd.args.push_back(tokens[i]);
         }
-        // Otherwise, treat as a regular argument.
-        cmd.args.push_back(tokens[i]);
     }
     return cmd;
 }
@@ -216,13 +181,12 @@ std::string processEchoLine(const std::string &line) {
     return out;
 }
 
-// --- Builtin ls ---
+// Builtin ls implementation.
 void builtin_ls(const std::vector<std::string>& args) {
     if (args.size() == 1) {
         try {
-            for (const auto &entry : fs::directory_iterator(fs::current_path())) {
+            for (const auto &entry : fs::directory_iterator(fs::current_path()))
                 std::cout << entry.path().filename().string() << std::endl;
-            }
         } catch (const fs::filesystem_error &e) {
             std::cerr << "ls: " << e.what() << std::endl;
         }
@@ -234,9 +198,8 @@ void builtin_ls(const std::vector<std::string>& args) {
             std::cerr << "ls: " << path << ": No such file or directory" << std::endl;
         else if (fs::is_directory(path)) {
             try {
-                for (const auto &entry : fs::directory_iterator(path)) {
+                for (const auto &entry : fs::directory_iterator(path))
                     std::cout << entry.path().filename().string() << std::endl;
-                }
             } catch (const fs::filesystem_error &e) {
                 std::cerr << "ls: " << e.what() << std::endl;
             }
@@ -246,7 +209,6 @@ void builtin_ls(const std::vector<std::string>& args) {
     }
 }
 
-// --- Builtin command handlers ---
 void handleCdCommand(const std::vector<std::string>& args) {
     std::string targetDir;
     if (args.size() < 2) {
@@ -294,20 +256,17 @@ void handleTypeCommand(const std::string& command, const std::unordered_set<std:
 }
 
 std::string autocomplete(const std::string& input, const std::unordered_set<std::string>& builtins) {
-    for (const auto& builtin : builtins) {
+    for (const auto& builtin : builtins)
         if (builtin.find(input) == 0)
             return builtin + " ";
-    }
     return input;
 }
 
-// --- Main ---
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
 
-    // Set terminal to raw mode for TAB handling.
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
@@ -315,7 +274,6 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt exactly as "$ "
         std::cout << "$ ";
         std::cout.flush();
 
@@ -330,7 +288,7 @@ int main() {
                 input = autocomplete(input, builtins);
                 std::cout << "\r$ " << input;
                 std::cout.flush();
-            } else if (c == 127) { // Backspace
+            } else if (c == 127) {
                 if (!input.empty()) {
                     input.pop_back();
                     std::cout << "\r$ " << input;
@@ -410,6 +368,12 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
+                } else {
+                    int devNull = open("/dev/null", O_WRONLY);
+                    if (devNull != -1) {
+                        dup2(devNull, STDERR_FILENO);
+                        close(devNull);
+                    }
                 }
                 std::string echoArg;
                 for (size_t i = 1; i < cmd.args.size(); ++i) {
@@ -429,7 +393,6 @@ int main() {
             }
         }
         else {
-            // External command branch.
             int err_pipe[2];
             bool useErrPipe = false;
             if (cmd.errorFile.empty()) {
@@ -499,10 +462,8 @@ int main() {
                 execArgs.push_back(nullptr);
                 if (execvp(execArgs[0], execArgs.data()) == -1) {
                     std::cerr << command << ": command not found" << std::endl;
-                    for (char* arg : execArgs) {
-                        if (arg)
-                            free(arg);
-                    }
+                    for (char* arg : execArgs)
+                        if (arg) free(arg);
                     exit(EXIT_FAILURE);
                 }
             } else {
