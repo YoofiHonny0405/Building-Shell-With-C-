@@ -23,7 +23,7 @@
 
 namespace fs = std::filesystem;
 
-// Splits a string into tokens by a given delimiter.
+// Splits a string into tokens based on a delimiter.
 std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -73,6 +73,7 @@ std::string unescapePath(const std::string &path) {
     return result;
 }
 
+// Searches for an executable in the PATH.
 std::string findExecutable(const std::string &command) {
     const char* pathEnv = std::getenv("PATH");
     if (!pathEnv)
@@ -105,7 +106,7 @@ struct Command {
     bool appendError;
 };
 
-// Parses the command line. Redirection tokens (>, >>, 2>, 2>>) are expected as separate tokens.
+// Parse the command line, expecting redirection operators as separate tokens.
 Command parseCommand(const std::string& input) {
     Command cmd;
     std::vector<std::string> tokens = split(input, ' ');
@@ -181,7 +182,7 @@ std::string processEchoLine(const std::string &line) {
     return out;
 }
 
-// Builtin ls implementation.
+// Builtin ls: lists contents of current directory or provided directories.
 void builtin_ls(const std::vector<std::string>& args) {
     if (args.size() == 1) {
         try {
@@ -268,6 +269,7 @@ int main() {
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
 
+    // Set terminal to raw mode for TAB handling.
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
@@ -275,7 +277,7 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt exactly as "$ " with no preceding newline.
+        // Print prompt exactly as "$ "
         std::cout << "$ ";
         std::cout.flush();
 
@@ -290,7 +292,7 @@ int main() {
                 input = autocomplete(input, builtins);
                 std::cout << "\r$ " << input;
                 std::cout.flush();
-            } else if (c == 127) { // Handle backspace.
+            } else if (c == 127) {
                 if (!input.empty()) {
                     input.pop_back();
                     std::cout << "\r$ " << input;
@@ -346,7 +348,14 @@ int main() {
                 dup2(out_fd, STDOUT_FILENO);
                 close(out_fd);
             }
-            if (!cmd.errorFile.empty()) {
+            // If no explicit error redirection is specified, redirect stderr to /dev/null.
+            if (cmd.errorFile.empty()) {
+                int devNull = open("/dev/null", O_WRONLY);
+                if (devNull != -1) {
+                    dup2(devNull, STDERR_FILENO);
+                    close(devNull);
+                }
+            } else {
                 fs::path errorPath(cmd.errorFile);
                 try {
                     if (!fs::exists(errorPath.parent_path()))
@@ -365,13 +374,6 @@ int main() {
                 }
                 dup2(err_fd, STDERR_FILENO);
                 close(err_fd);
-            } else {
-                // If no error redirection is specified, redirect stderr to /dev/null.
-                int devNull = open("/dev/null", O_WRONLY);
-                if (devNull != -1) {
-                    dup2(devNull, STDERR_FILENO);
-                    close(devNull);
-                }
             }
             builtin_ls(cmd.args);
             continue;
@@ -438,12 +440,6 @@ int main() {
         }
         else {
             // External commands.
-            int err_pipe[2];
-            bool useErrPipe = false;
-            if (cmd.errorFile.empty()) {
-                if (pipe(err_pipe) == 0)
-                    useErrPipe = true;
-            }
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
@@ -487,11 +483,8 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
-                } else if (useErrPipe) {
-                    dup2(err_pipe[1], STDERR_FILENO);
-                    close(err_pipe[0]);
-                    close(err_pipe[1]);
                 } else {
+                    // No explicit error redirection: discard stderr.
                     int devNull = open("/dev/null", O_WRONLY);
                     if (devNull != -1) {
                         dup2(devNull, STDERR_FILENO);
@@ -507,31 +500,15 @@ int main() {
                 execArgs.push_back(nullptr);
                 if (execvp(execArgs[0], execArgs.data()) == -1) {
                     std::cerr << command << ": command not found" << std::endl;
-                    for (char* arg : execArgs) {
+                    for (char* arg : execArgs)
                         if (arg)
                             free(arg);
-                    }
                     exit(EXIT_FAILURE);
                 }
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                if (useErrPipe) {
-                    close(err_pipe[1]);
-                    std::string errOutput;
-                    char buffer[256];
-                    ssize_t count;
-                    while ((count = read(err_pipe[0], buffer, sizeof(buffer))) > 0)
-                        errOutput.append(buffer, count);
-                    close(err_pipe[0]);
-                    if (!errOutput.empty()) {
-                        std::cerr << errOutput;
-                        if (errOutput.back() != '\n')
-                            std::cerr << std::endl;
-                    }
-                } else {
-                    std::fflush(stderr);
-                }
+                std::fflush(stderr);
                 std::cout << std::endl;
             }
         }
