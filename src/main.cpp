@@ -23,6 +23,7 @@
 
 namespace fs = std::filesystem;
 
+// Split a string into tokens by a given delimiter.
 std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -59,6 +60,7 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     return tokens;
 }
 
+// Remove surrounding quotes.
 std::string unescapePath(const std::string &path) {
     std::string result;
     bool inSingle = false, inDouble = false;
@@ -337,7 +339,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: "
+                        std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -357,7 +359,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: "
+                        std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -394,7 +396,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: "
+                        std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -414,7 +416,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: "
+                        std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -442,7 +444,8 @@ int main() {
                 int status;
                 waitpid(pid, &status, 0);
                 std::fflush(stderr);
-                std::cout << std::endl;
+                if (isatty(STDOUT_FILENO))
+                    std::cout << std::endl;
             }
         }
         else {
@@ -457,7 +460,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: "
+                        std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -477,7 +480,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: "
+                        std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -515,7 +518,8 @@ int main() {
                 int status;
                 waitpid(pid, &status, 0);
                 std::fflush(stderr);
-                std::cout << std::endl;
+                if (isatty(STDOUT_FILENO))
+                    std::cout << std::endl;
             }
         }
     }
