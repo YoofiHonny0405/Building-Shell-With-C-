@@ -251,8 +251,8 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt exactly as "$ " on a new line.
-        std::cout << "\n$ ";
+        // Print prompt exactly as "$ " (with no preceding newline)
+        std::cout << "$ ";
         std::cout.flush();
 
         std::string input;
@@ -264,12 +264,12 @@ int main() {
                 break;
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                std::cout << "\n$ " << input;
+                std::cout << "\r$ " << input;
                 std::cout.flush();
             } else if (c == 127) { // Handle backspace
                 if (!input.empty()) {
                     input.pop_back();
-                    std::cout << "\n$ " << input;
+                    std::cout << "\r$ " << input;
                     std::cout.flush();
                 }
             } else {
@@ -279,9 +279,9 @@ int main() {
             }
         }
 
-        if (input == "exit 0\n") break;
+        if(input == "exit 0") break;
         Command cmd = parseCommand(input);
-        if (cmd.args.empty()) continue;
+        if(cmd.args.empty()) continue;
         std::string command = unescapePath(cmd.args[0]);
         if (command == "cd") {
             handleCdCommand(cmd.args);
@@ -301,14 +301,14 @@ int main() {
         }
         if (command == "echo") {
             pid_t pid = fork();
-            if (pid == 0) {
+            if(pid == 0) {
                 // Handle stdout redirection
-                if (!cmd.outputFile.empty()) {
+                if(!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
-                    } catch (const fs::filesystem_error &e) {
+                    } catch (const fs::filesystem_error& e) {
                         std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
@@ -322,12 +322,12 @@ int main() {
                     close(out_fd);
                 }
                 // Handle stderr redirection if specified; if not, leave stderr unchanged
-                if (!cmd.errorFile.empty()) {
+                if(!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
-                    } catch (const fs::filesystem_error &e) {
+                    } catch (const fs::filesystem_error& e) {
                         std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
@@ -360,16 +360,16 @@ int main() {
         }
         else {
             pid_t pid = fork();
-            if (pid == -1) {
+            if(pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
-            } else if (pid == 0) {
+            } else if(pid == 0) {
                 // Handle stdout redirection
-                if (!cmd.outputFile.empty()) {
+                if(!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
-                    } catch (const fs::filesystem_error &e) {
+                    } catch (const fs::filesystem_error& e) {
                         std::cerr << "Failed to create directory for output file: " 
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
@@ -383,12 +383,12 @@ int main() {
                     close(out_fd);
                 }
                 // Handle stderr redirection if specified; if not, leave stderr unchanged
-                if (!cmd.errorFile.empty()) {
+                if(!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
-                    } catch (const fs::filesystem_error &e) {
+                    } catch (const fs::filesystem_error& e) {
                         std::cerr << "Failed to create directory for error file: " 
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
@@ -402,16 +402,16 @@ int main() {
                     close(err_fd);
                 }
                 std::vector<char*> execArgs;
-                for (const auto& arg : cmd.args) {
+                for(const auto& arg : cmd.args) {
                     std::string unescaped = unescapePath(arg);
                     char* arg_copy = strdup(unescaped.c_str());
                     execArgs.push_back(arg_copy);
                 }
                 execArgs.push_back(nullptr);
-                if (execvp(execArgs[0], execArgs.data()) == -1) {
+                if(execvp(execArgs[0], execArgs.data()) == -1) {
                     std::cerr << command << ": command not found" << std::endl;
-                    for (char* arg : execArgs) {
-                        if (arg) free(arg);
+                    for(char* arg : execArgs) {
+                        if(arg) free(arg);
                     }
                     exit(EXIT_FAILURE);
                 }
