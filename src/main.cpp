@@ -23,7 +23,7 @@
 
 namespace fs = std::filesystem;
 
-// Split input into tokens
+// Splits a string by the given delimiter.
 std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -60,7 +60,7 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     return tokens;
 }
 
-// Remove quotes from a string
+// Removes surrounding quotes.
 std::string unescapePath(const std::string &path) {
     std::string result;
     bool inSingle = false, inDouble = false;
@@ -75,7 +75,8 @@ std::string unescapePath(const std::string &path) {
 
 std::string findExecutable(const std::string &command) {
     const char* pathEnv = std::getenv("PATH");
-    if (!pathEnv) return "";
+    if (!pathEnv)
+        return "";
     std::istringstream iss(pathEnv);
     std::string path;
     while (std::getline(iss, path, ':')) {
@@ -90,10 +91,23 @@ std::string findExecutable(const std::string &command) {
 
 std::string trim(const std::string &s) {
     size_t start = s.find_first_not_of(" \t\r\n");
-    if(start == std::string::npos)
+    if (start == std::string::npos)
         return "";
     size_t end = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
+}
+
+// --- Redirection operator helpers ---
+// If token begins with op (">", ">>", "2>", "2>>"), return pair {op, remainder}.
+// If token equals op exactly, return {op, ""}.
+std::pair<std::string, std::string> splitRedirToken(const std::string &token, const std::string &op) {
+    if (token.compare(0, op.size(), op) == 0) {
+        if (token.size() == op.size())
+            return {op, ""};
+        else
+            return {op, token.substr(op.size())};
+    }
+    return {"", ""};
 }
 
 struct Command {
@@ -104,38 +118,57 @@ struct Command {
     bool appendError;
 };
 
-Command parseCommand(const std::string& input) {
+// Parse command line and check for redirection operators.
+// This version also handles tokens like ">>/tmp/foo/bar.md" (no space between operator and filename).
+Command parseCommand(const std::string &input) {
     Command cmd;
+    cmd.appendOutput = false;
+    cmd.appendError = false;
     std::vector<std::string> tokens = split(input, ' ');
     for (size_t i = 0; i < tokens.size(); ++i) {
-        std::string token = trim(unescapePath(tokens[i]));
-        if (token == ">" || token == "1>") {
-            if (i + 1 < tokens.size()) {
-                cmd.outputFile = trim(unescapePath(tokens[i + 1]));
-                cmd.appendOutput = false;
-                i++;
+        std::string raw = trim(tokens[i]);
+        std::string token = trim(unescapePath(raw));
+        // Check if token starts with a redirection operator.
+        std::pair<std::string, std::string> opPair;
+        if ((opPair = splitRedirToken(token, "1>>")).first == "1>>" ||
+            opPair = splitRedirToken(token, ">>"), opPair.first == ">>") {
+            cmd.appendOutput = true;
+            if (!opPair.second.empty()) {
+                cmd.outputFile = trim(opPair.second);
+            } else if (i + 1 < tokens.size()) {
+                cmd.outputFile = trim(unescapePath(tokens[++i]));
             }
-        } else if (token == "1>>" || token == ">>") {
-            if (i + 1 < tokens.size()) {
-                cmd.outputFile = trim(unescapePath(tokens[i + 1]));
-                cmd.appendOutput = true;
-                i++;
-            }
-        } else if (token == "2>") {
-            if (i + 1 < tokens.size()) {
-                cmd.errorFile = trim(unescapePath(tokens[i + 1]));
-                cmd.appendError = false;
-                i++;
-            }
-        } else if (token == "2>>") {
-            if (i + 1 < tokens.size()) {
-                cmd.errorFile = trim(unescapePath(tokens[i + 1]));
-                cmd.appendError = true;
-                i++;
-            }
-        } else {
-            cmd.args.push_back(tokens[i]);
+            continue;
         }
+        if ((opPair = splitRedirToken(token, "1>")).first == "1>") {
+            cmd.appendOutput = false;
+            if (!opPair.second.empty()) {
+                cmd.outputFile = trim(opPair.second);
+            } else if (i + 1 < tokens.size()) {
+                cmd.outputFile = trim(unescapePath(tokens[++i]));
+            }
+            continue;
+        }
+        if ((opPair = splitRedirToken(token, "2>>")).first == "2>>") {
+            cmd.appendError = true;
+            if (!opPair.second.empty()) {
+                cmd.errorFile = trim(opPair.second);
+            } else if (i + 1 < tokens.size()) {
+                cmd.errorFile = trim(unescapePath(tokens[++i]));
+            }
+            continue;
+        }
+        if ((opPair = splitRedirToken(token, "2>")).first == "2>") {
+            cmd.appendError = false;
+            if (!opPair.second.empty()) {
+                cmd.errorFile = trim(opPair.second);
+            } else if (i + 1 < tokens.size()) {
+                cmd.errorFile = trim(unescapePath(tokens[++i]));
+            }
+            continue;
+        }
+        // Otherwise, treat as a regular argument.
+        cmd.args.push_back(tokens[i]);
     }
     return cmd;
 }
@@ -183,7 +216,7 @@ std::string processEchoLine(const std::string &line) {
     return out;
 }
 
-// Builtin ls: lists directory contents or prints error if the target doesn't exist.
+// --- Builtin ls ---
 void builtin_ls(const std::vector<std::string>& args) {
     if (args.size() == 1) {
         try {
@@ -213,7 +246,7 @@ void builtin_ls(const std::vector<std::string>& args) {
     }
 }
 
-// Builtin command handlers for cd, pwd, type, and autocompletion.
+// --- Builtin command handlers ---
 void handleCdCommand(const std::vector<std::string>& args) {
     std::string targetDir;
     if (args.size() < 2) {
@@ -268,10 +301,10 @@ std::string autocomplete(const std::string& input, const std::unordered_set<std:
     return input;
 }
 
+// --- Main ---
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
-    // Add "ls" to builtins.
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
 
     // Set terminal to raw mode for TAB handling.
@@ -282,7 +315,7 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt exactly as "$ " (no extra newline).
+        // Print prompt exactly as "$ "
         std::cout << "$ ";
         std::cout.flush();
 
@@ -297,7 +330,7 @@ int main() {
                 input = autocomplete(input, builtins);
                 std::cout << "\r$ " << input;
                 std::cout.flush();
-            } else if (c == 127) { // Handle backspace
+            } else if (c == 127) { // Backspace
                 if (!input.empty()) {
                     input.pop_back();
                     std::cout << "\r$ " << input;
@@ -338,7 +371,6 @@ int main() {
         if (command == "echo") {
             pid_t pid = fork();
             if (pid == 0) {
-                // Handle stdout redirection
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
@@ -359,7 +391,6 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // For echo, if no error redirection is specified, leave stderr unchanged.
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
@@ -398,12 +429,17 @@ int main() {
             }
         }
         else {
-            // External commands
+            // External command branch.
+            int err_pipe[2];
+            bool useErrPipe = false;
+            if (cmd.errorFile.empty()) {
+                if (pipe(err_pipe) == 0)
+                    useErrPipe = true;
+            }
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if (pid == 0) {
-                // Handle stdout redirection if specified
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
@@ -424,7 +460,6 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // If no error redirection is specified, redirect stderr to /dev/null.
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
@@ -444,6 +479,10 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
+                } else if (useErrPipe) {
+                    dup2(err_pipe[1], STDERR_FILENO);
+                    close(err_pipe[0]);
+                    close(err_pipe[1]);
                 } else {
                     int devNull = open("/dev/null", O_WRONLY);
                     if (devNull != -1) {
@@ -469,7 +508,22 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                std::fflush(stderr);
+                if (useErrPipe) {
+                    close(err_pipe[1]);
+                    std::string errOutput;
+                    char buffer[256];
+                    ssize_t count;
+                    while ((count = read(err_pipe[0], buffer, sizeof(buffer))) > 0)
+                        errOutput.append(buffer, count);
+                    close(err_pipe[0]);
+                    if (!errOutput.empty()) {
+                        std::cerr << errOutput;
+                        if (errOutput.back() != '\n')
+                            std::cerr << std::endl;
+                    }
+                } else {
+                    std::fflush(stderr);
+                }
                 std::cout << std::endl;
             }
         }
