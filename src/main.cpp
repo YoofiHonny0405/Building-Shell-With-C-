@@ -23,6 +23,7 @@
 
 namespace fs = std::filesystem;
 
+// Splitting input into tokens.
 std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -59,6 +60,7 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     return tokens;
 }
 
+// Remove quotes.
 std::string unescapePath(const std::string &path) {
     std::string result;
     bool inSingle = false, inDouble = false;
@@ -182,66 +184,45 @@ std::string processEchoLine(const std::string &line) {
     return out;
 }
 
-void handleCdCommand(const std::vector<std::string>& args) {
-    std::string targetDir;
-    if (args.size() < 2) {
-        const char* home = std::getenv("HOME");
-        if (home)
-            targetDir = home;
-        else {
-            std::cerr << "cd: HOME not set" << std::endl;
-            return;
-        }
-    } else {
-        targetDir = args[1];
-        if (targetDir[0] == '~') {
-            const char* home = std::getenv("HOME");
-            if (home)
-                targetDir = home + targetDir.substr(1);
-            else {
-                std::cerr << "cd: HOME not set" << std::endl;
-                return;
+// Builtin ls implementation.
+void builtin_ls(const std::vector<std::string>& args) {
+    // If no arguments, list current directory.
+    if (args.size() == 1) {
+        try {
+            for (const auto &entry : fs::directory_iterator(fs::current_path())) {
+                std::cout << entry.path().filename().string() << std::endl;
             }
+        } catch (const fs::filesystem_error &e) {
+            std::cerr << "ls: " << e.what() << std::endl;
+        }
+        return;
+    }
+    // Process each argument.
+    for (size_t i = 1; i < args.size(); ++i) {
+        std::string path = args[i];
+        if (!fs::exists(path)) {
+            std::cerr << "ls: " << path << ": No such file or directory" << std::endl;
+        } else if (fs::is_directory(path)) {
+            try {
+                for (const auto &entry : fs::directory_iterator(path)) {
+                    std::cout << entry.path().filename().string() << std::endl;
+                }
+            } catch (const fs::filesystem_error &e) {
+                std::cerr << "ls: " << e.what() << std::endl;
+            }
+        } else {
+            std::cout << fs::path(path).filename().string() << std::endl;
         }
     }
-    if (chdir(targetDir.c_str()) != 0)
-        std::cerr << "cd: " << targetDir << ": " << strerror(errno) << std::endl;
-}
-
-void handlePwdCommand() {
-    char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) != nullptr)
-        std::cout << cwd << std::endl;
-    else
-        std::cerr << "pwd: " << strerror(errno) << std::endl;
-}
-
-void handleTypeCommand(const std::string& command, const std::unordered_set<std::string>& builtins) {
-    if (builtins.find(command) != builtins.end())
-        std::cout << command << " is a shell builtin" << std::endl;
-    else {
-        std::string path = findExecutable(command);
-        if (!path.empty())
-            std::cout << command << " is " << path << std::endl;
-        else
-            std::cerr << command << ": not found" << std::endl;
-    }
-}
-
-std::string autocomplete(const std::string& input, const std::unordered_set<std::string>& builtins) {
-    for (const auto& builtin : builtins) {
-        if (builtin.find(input) == 0)
-            return builtin + " ";
-    }
-    return input;
 }
 
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
-    std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd"};
+    // Add "ls" to builtins.
+    std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
 
-    // Set terminal to raw mode for TAB handling
+    // Set terminal to raw mode for TAB handling.
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
@@ -249,7 +230,7 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt exactly as "$ " (with no preceding newline)
+        // Print prompt exactly as "$ ".
         std::cout << "$ ";
         std::cout.flush();
 
@@ -283,6 +264,8 @@ int main() {
         if (cmd.args.empty())
             continue;
         std::string command = unescapePath(cmd.args[0]);
+
+        // Check for builtins
         if (command == "cd") {
             handleCdCommand(cmd.args);
             continue;
@@ -296,6 +279,11 @@ int main() {
                 handleTypeCommand(cmd.args[1], builtins);
             else
                 std::cerr << "type: missing operand" << std::endl;
+            continue;
+        }
+        if (command == "ls") {
+            // Use our builtin ls.
+            builtin_ls(cmd.args);
             continue;
         }
         if (command == "echo") {
@@ -322,7 +310,7 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // For echo, if no error redirection is specified, leave stderr unchanged.
+                // Handle stderr redirection if specified; otherwise, leave stderr unchanged.
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
@@ -361,8 +349,7 @@ int main() {
             }
         }
         else {
-            // For external commands, if no stderr redirection is specified,
-            // capture stderr via a pipe.
+            // External command branch.
             int err_pipe[2];
             bool useErrPipe = false;
             if (cmd.errorFile.empty()) {
@@ -375,7 +362,6 @@ int main() {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if (pid == 0) {
                 // Child process:
-                // Handle stdout redirection if specified
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
@@ -396,7 +382,6 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                // Handle stderr redirection:
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
@@ -417,7 +402,6 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 } else if (useErrPipe) {
-                    // Redirect stderr to the pipe
                     dup2(err_pipe[1], STDERR_FILENO);
                     close(err_pipe[0]);
                     close(err_pipe[1]);
@@ -440,7 +424,6 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                // If we used the pipe for stderr, read its contents and print them
                 if (useErrPipe) {
                     close(err_pipe[1]);
                     std::string errOutput;
@@ -451,7 +434,6 @@ int main() {
                     }
                     close(err_pipe[0]);
                     if (!errOutput.empty()) {
-                        // Print error output on its own line.
                         std::cerr << errOutput;
                         if (errOutput.back() != '\n')
                             std::cerr << std::endl;
@@ -464,7 +446,6 @@ int main() {
         }
     }
 
-    // Restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     return 0;
 }
