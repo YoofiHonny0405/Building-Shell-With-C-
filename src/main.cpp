@@ -269,20 +269,17 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
-
-    // Instead of printing the prompt to STDOUT, print it to /dev/tty.
-    FILE *tty = fopen("/dev/tty", "w");
-
+    // Only print the prompt if STDOUT is a terminal.
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
     while (true) {
-        // Print prompt to /dev/tty if available.
-        if (tty)
-            fprintf(tty, "$ "), fflush(tty);
+        if (isatty(STDOUT_FILENO)) {
+            std::cout << "$ ";
+            std::cout.flush();
+        }
         std::string input;
         char c;
         while (true) {
@@ -292,30 +289,32 @@ int main() {
                 break;
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                if (tty) {
-                    fprintf(tty, "\r$ %s", input.c_str());
-                    fflush(tty);
+                if (isatty(STDOUT_FILENO)) {
+                    std::cout << "\r$ " << input;
+                    std::cout.flush();
                 }
             } else if (c == 127) { // Handle backspace.
                 if (!input.empty()) {
                     input.pop_back();
-                    if (tty) {
-                        fprintf(tty, "\r$ %s", input.c_str());
-                        fflush(tty);
+                    if (isatty(STDOUT_FILENO)) {
+                        std::cout << "\r$ " << input;
+                        std::cout.flush();
                     }
                 }
             } else {
                 input.push_back(c);
-                if (tty) {
-                    fputc(c, tty);
-                    fflush(tty);
+                if (isatty(STDOUT_FILENO)) {
+                    std::cout << c;
+                    std::cout.flush();
                 }
             }
         }
+        // If no more input is available, break.
         if (feof(stdin))
             break;
         if (input == "exit 0\n")
             break;
+        input = trim(input); // Trim the input to remove any trailing spaces
         Command cmd = parseCommand(input);
         if (cmd.args.empty())
             continue;
@@ -345,7 +344,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: " 
+                        std::cerr << "Failed to create directory for output file: "
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -365,7 +364,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: " 
+                        std::cerr << "Failed to create directory for error file: "
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -402,7 +401,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: " 
+                        std::cerr << "Failed to create directory for output file: "
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -422,7 +421,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: " 
+                        std::cerr << "Failed to create directory for error file: "
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -466,7 +465,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: " 
+                        std::cerr << "Failed to create directory for output file: "
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -481,12 +480,12 @@ int main() {
                     close(out_fd);
                 }
                 if (!cmd.errorFile.empty()) {
-                    fs::path errorPath(cmd.errorFile);
+                                        fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: " 
+                        std::cerr << "Failed to create directory for error file: "
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -529,9 +528,6 @@ int main() {
             }
         }
     }
-
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    if (tty)
-        fclose(tty);
     return 0;
 }
