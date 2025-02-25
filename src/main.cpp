@@ -23,6 +23,7 @@
 
 namespace fs = std::filesystem;
 
+// Splits a string into tokens based on the given delimiter.
 std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -54,10 +55,12 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
             token.push_back(c);
         }
     }
-    if (!token.empty()) tokens.push_back(token);
+    if (!token.empty())
+        tokens.push_back(token);
     return tokens;
 }
 
+// Removes surrounding quotes.
 std::string unescapePath(const std::string &path) {
     std::string result;
     bool inSingle = false, inDouble = false;
@@ -72,23 +75,24 @@ std::string unescapePath(const std::string &path) {
 
 std::string findExecutable(const std::string &command) {
     const char* pathEnv = std::getenv("PATH");
-    if (!pathEnv) return "";
+    if (!pathEnv)
+        return "";
     std::istringstream iss(pathEnv);
     std::string path;
     while (std::getline(iss, path, ':')) {
-        if (path.empty()) continue;
+        if (path.empty())
+            continue;
         std::string fullPath = path + "/" + command;
-        // Check if file exists and is executable
-        if (access(fullPath.c_str(), F_OK | X_OK) == 0) {
+        if (access(fullPath.c_str(), F_OK | X_OK) == 0)
             return fullPath;
-        }
     }
     return "";
 }
 
 std::string trim(const std::string &s) {
     size_t start = s.find_first_not_of(" \t\r\n");
-    if(start == std::string::npos) return "";
+    if(start == std::string::npos)
+        return "";
     size_t end = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
 }
@@ -104,7 +108,7 @@ struct Command {
 Command parseCommand(const std::string& input) {
     Command cmd;
     std::vector<std::string> tokens = split(input, ' ');
-    for (size_t i = 0; i < tokens.size(); ++i) {
+    for (size_t i = 0; i < tokens.size(); i++) {
         std::string token = unescapePath(tokens[i]);
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
@@ -143,17 +147,15 @@ std::string processEchoLine(const std::string &line) {
     bool lastWasSpace = false;
     for (size_t i = 0; i < line.size(); i++) {
         char c = line[i];
-        // Handle escape sequences
         if (escaped) {
             out.push_back(c);
             escaped = false;
             continue;
         }
-        if (c == '\\' && !inSingle) {  // Backslashes are literal in single quotes
+        if (c == '\\' && !inSingle) {
             escaped = true;
             continue;
         }
-        // Handle quotes
         if (c == '"' && !inSingle) {
             inDouble = !inDouble;
             continue;
@@ -162,7 +164,6 @@ std::string processEchoLine(const std::string &line) {
             inSingle = !inSingle;
             continue;
         }
-        // Handle spaces
         if (c == ' ') {
             if (inSingle || inDouble) {
                 out.push_back(c);
@@ -175,78 +176,67 @@ std::string processEchoLine(const std::string &line) {
             }
             continue;
         }
-        // Handle regular characters
         out.push_back(c);
         lastWasSpace = false;
     }
-    // Trim trailing spaces
-    while (!out.empty() && out.back() == ' ') {
+    while (!out.empty() && out.back() == ' ')
         out.pop_back();
-    }
     return out;
 }
 
 void handleCdCommand(const std::vector<std::string>& args) {
     std::string targetDir;
-    // If no argument is provided, go to the home directory
     if (args.size() < 2) {
         const char* home = std::getenv("HOME");
-        if (home) {
+        if (home)
             targetDir = home;
-        } else {
+        else {
             std::cerr << "cd: HOME not set" << std::endl;
             return;
         }
     } else {
         targetDir = args[1];
-        // Handle '~' expansion for home directory
         if (targetDir[0] == '~') {
             const char* home = std::getenv("HOME");
-            if (home) {
-                targetDir = home + targetDir.substr(1); // Remove '~' and prepend home directory
-            } else {
+            if (home)
+                targetDir = home + targetDir.substr(1);
+            else {
                 std::cerr << "cd: HOME not set" << std::endl;
                 return;
             }
         }
     }
-    // Attempt to change directory
-    if (chdir(targetDir.c_str()) != 0) {
+    if (chdir(targetDir.c_str()) != 0)
         std::cerr << "cd: " << targetDir << ": " << strerror(errno) << std::endl;
-    }
 }
 
 void handlePwdCommand() {
     char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+    if (getcwd(cwd, sizeof(cwd)) != nullptr)
         std::cout << cwd << std::endl;
-    } else {
+    else
         std::cerr << "pwd: " << strerror(errno) << std::endl;
-    }
 }
 
 void handleTypeCommand(const std::string& command, const std::unordered_set<std::string>& builtins) {
-    if (builtins.find(command) != builtins.end()) {
+    if (builtins.find(command) != builtins.end())
         std::cout << command << " is a shell builtin" << std::endl;
-    } else {
+    else {
         std::string path = findExecutable(command);
-        if (!path.empty()) {
+        if (!path.empty())
             std::cout << command << " is " << path << std::endl;
-        } else {
+        else
             std::cerr << command << ": not found" << std::endl;
-        }
     }
 }
 
 std::string autocomplete(const std::string& input, const std::unordered_set<std::string>& builtins) {
     for (const auto& builtin : builtins) {
-        if (builtin.find(input) == 0) {
+        if (builtin.find(input) == 0)
             return builtin + " ";
-        }
     }
     return input;
 }
-
 
 int main() {
     std::cout << std::unitbuf;
@@ -284,7 +274,7 @@ int main() {
                 std::cout.flush();
             }
         }
-    
+
         if (input == "exit 0") break;
         Command cmd = parseCommand(input);
         if (cmd.args.empty()) continue;
@@ -347,85 +337,82 @@ int main() {
             }
         } else {
             pid_t pid = fork();
-if (pid == -1) {
-    std::cerr << "Failed to fork process" << std::endl;
-} else if (pid == 0) {
-    // Handle output redirection
-    if (!cmd.outputFile.empty()) {
-        try {
-            fs::path outputPath(cmd.outputFile);
-            fs::create_directories(outputPath.parent_path());
-        } catch (const std::exception& e) {
-            std::cerr << "Failed to create directories for output file: " << e.what() << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        
-        int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
-        if (fd == -1) {
-            std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        
-        dup2(fd, STDOUT_FILENO);
-        close(fd);
-    }
-    
-    // Handle error redirection
-    if (!cmd.errorFile.empty()) {
-        try {
-            fs::path errorPath(cmd.errorFile);
-            fs::create_directories(errorPath.parent_path());
-        } catch (const std::exception& e) {
-            std::cerr << "Failed to create directories for error file: " << e.what() << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        
-        int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
-        if (fd == -1) {
-            std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        
-        dup2(fd, STDERR_FILENO);
-        close(fd);
-    }
-    // Special case for the test: redirect stderr to the same file as stdout if no explicit stderr redirection
-    else if (!cmd.outputFile.empty()) {
-        int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
-        if (fd == -1) {
-            std::cerr << "Failed to open output file for stderr: " << strerror(errno) << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        
-        dup2(fd, STDERR_FILENO);
-        close(fd);
-    }
-    
-    // Execute the command
-    std::vector<char*> execArgs;
-    for (const auto& arg : cmd.args) {
-        std::string unescaped = unescapePath(arg);
-        char* arg_copy = strdup(unescaped.c_str());
-        execArgs.push_back(arg_copy);
-    }
-    execArgs.push_back(nullptr);
-    
-    if (execvp(execArgs[0], execArgs.data()) == -1) {
-        std::cerr << command << ": command not found" << std::endl;
-        for (char* arg : execArgs) {
-            if (arg) free(arg);
-        }
-        exit(EXIT_FAILURE);
-    }
-} else {
-    int status;
-    waitpid(pid, &status, 0);
-}
+            if (pid == -1) {
+                std::cerr << "Failed to fork process" << std::endl;
+            } else if (pid == 0) {
+                // Handle output redirection
+                if (!cmd.outputFile.empty()) {
+                    try {
+                        fs::path outputPath(cmd.outputFile);
+                        fs::create_directories(outputPath.parent_path());
+                    } catch (const std::exception& e) {
+                        std::cerr << "Failed to create directories for output file: " << e.what() << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
 
-            
+                    int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
+                    if (fd == -1) {
+                        std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+
+                    dup2(fd, STDOUT_FILENO);
+                    close(fd);
+                }
+
+                // Handle error redirection
+                if (!cmd.errorFile.empty()) {
+                    try {
+                        fs::path errorPath(cmd.errorFile);
+                        fs::create_directories(errorPath.parent_path());
+                    } catch (const std::exception& e) {
+                        std::cerr << "Failed to create directories for error file: " << e.what() << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+
+                    int fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
+                    if (fd == -1) {
+                        std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+
+                    dup2(fd, STDERR_FILENO);
+                    close(fd);
+                }
+                // Special case for the test: redirect stderr to the same file as stdout if no explicit stderr redirection
+                else if (!cmd.outputFile.empty()) {
+                    int fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
+                    if (fd == -1) {
+                        std::cerr << "Failed to open output file for stderr: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+
+                    dup2(fd, STDERR_FILENO);
+                    close(fd);
+                }
+
+                // Execute the command
+                std::vector<char*> execArgs;
+                for (const auto& arg : cmd.args) {
+                    std::string unescaped = unescapePath(arg);
+                    char* arg_copy = strdup(unescaped.c_str());
+                    execArgs.push_back(arg_copy);
+                }
+                execArgs.push_back(nullptr);
+
+                if (execvp(execArgs[0], execArgs.data()) == -1) {
+                    std::cerr << command << ": command not found" << std::endl;
+                    for (char* arg : execArgs) {
+                        if (arg) free(arg);
+                    }
+                    exit(EXIT_FAILURE);
+                }
+            } else {
+                int status;
+                waitpid(pid, &status, 0);
+            }
         }
     }
-    
 
     // Restore terminal settings
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
