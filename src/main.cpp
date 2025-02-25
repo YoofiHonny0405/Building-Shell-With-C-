@@ -281,6 +281,9 @@ int main() {
 
     while (true) {
         // Print prompt to /dev/tty (if available).
+        std::cout << std::flush;
+        std::cerr << std::flush;
+
         if (tty) {
             fprintf(tty, "$ ");
             fflush(tty);
