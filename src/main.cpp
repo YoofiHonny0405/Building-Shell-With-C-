@@ -347,7 +347,6 @@ int main() {
             }
         } else {
             pid_t pid = fork();
-            pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if (pid == 0) {
