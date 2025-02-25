@@ -17,6 +17,9 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <cstdio>
+#include <ios>
+#include <ostream>
+#include <cstddef>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -138,7 +141,6 @@ Command parseCommand(const std::string& input) {
     return cmd;
 }
 
-
 std::string processEchoLine(const std::string &line) {
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
@@ -181,8 +183,6 @@ std::string processEchoLine(const std::string &line) {
         out.pop_back();
     return out;
 }
-
-
 
 void handleCdCommand(const std::vector<std::string>& args) {
     std::string targetDir;
@@ -269,19 +269,16 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
-
     // Open /dev/tty for prompt output.
     FILE *tty = fopen("/dev/tty", "w");
-
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
     while (true) {
-        // Only print the prompt if STDIN is a terminal.
-        if (isatty(STDIN_FILENO) && tty) {
+        // Write prompt to /dev/tty so it isn't redirected.
+        if (tty) {
             fprintf(tty, "$ ");
             fflush(tty);
         }
@@ -294,21 +291,21 @@ int main() {
                 break;
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                if (isatty(STDIN_FILENO) && tty) {
+                if (tty) {
                     fprintf(tty, "\r$ %s", input.c_str());
                     fflush(tty);
                 }
             } else if (c == 127) { // Handle backspace.
                 if (!input.empty()) {
                     input.pop_back();
-                    if (isatty(STDIN_FILENO) && tty) {
+                    if (tty) {
                         fprintf(tty, "\r$ %s", input.c_str());
                         fflush(tty);
                     }
                 }
             } else {
                 input.push_back(c);
-                if (isatty(STDIN_FILENO) && tty) {
+                if (tty) {
                     fputc(c, tty);
                     fflush(tty);
                 }
@@ -318,6 +315,7 @@ int main() {
             break;
         if (input == "exit 0\n")
             break;
+        input = trim(input); // Trim the input to remove any trailing spaces
         Command cmd = parseCommand(input);
         if (cmd.args.empty())
             continue;
@@ -338,6 +336,7 @@ int main() {
             continue;
         }
         if (command == "ls") {
+            // Execute builtin ls in a child process.
             pid_t pid = fork();
             if (pid == 0) {
                 if (!cmd.outputFile.empty()) {
@@ -485,54 +484,53 @@ int main() {
                     fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
-                            fs::create_directories(errorPath.parent_path());
-                    } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: "
-                                  << errorPath.parent_path() << " - " << e.what() << std::endl;
-                        exit(EXIT_FAILURE);
-                    }
-                    int err_fd = open(cmd.errorFile.c_str(),
-                                      O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
-                                      0644);
-                    if (err_fd == -1) {
-                        std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
-                        exit(EXIT_FAILURE);
-                    }
-                    dup2(err_fd, STDERR_FILENO);
-                    close(err_fd);
-                } else {
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if (devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
-                }
-                std::vector<char*> execArgs;
-                for (const auto& arg : cmd.args) {
-                    std::string unescaped = unescapePath(arg);
-                    char* arg_copy = strdup(unescaped.c_str());
-                    execArgs.push_back(arg_copy);
-                }
-                execArgs.push_back(nullptr);
-                if (execvp(execArgs[0], execArgs.data()) == -1) {
-                    std::cerr << command << ": command not found" << std::endl;
-                    for (char* arg : execArgs)
-                        if (arg)
-                            free(arg);
+                        fs::create_directories(errorPath.parent_path());
+                } catch (const fs::filesystem_error &e) {
+                    std::cerr << "Failed to create directory for error file: "
+                              << errorPath.parent_path() << " - " << e.what() << std::endl;
                     exit(EXIT_FAILURE);
                 }
+                int err_fd = open(cmd.errorFile.c_str(),
+                                  O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
+                                  0644);
+                if (err_fd == -1) {
+                    std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                dup2(err_fd, STDERR_FILENO);
+                close(err_fd);
             } else {
-                int status;
-                waitpid(pid, &status, 0);
-                std::fflush(stderr);
-                if (isatty(STDOUT_FILENO))
-                    std::cout << std::endl;
+                int devNull = open("/dev/null", O_WRONLY);
+                if (devNull != -1) {
+                    dup2(devNull, STDERR_FILENO);
+                    close(devNull);
+                }
             }
+            std::vector<char*> execArgs;
+            for (const auto& arg : cmd.args) {
+                std::string unescaped = unescapePath(arg);
+                char* arg_copy = strdup(unescaped.c_str());
+                execArgs.push_back(arg_copy);
+            }
+            execArgs.push_back(nullptr);
+            if (execvp(execArgs[0], execArgs.data()) == -1) {
+                std::cerr << command << ": command not found" << std::endl;
+                for (char* arg : execArgs)
+                    if (arg)
+                        free(arg);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            int status;
+            waitpid(pid, &status, 0);
+            std::fflush(stderr);
+            if (isatty(STDOUT_FILENO))
+                std::cout << std::endl;
         }
     }
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    if (tty)
-        fclose(tty);
-    return 0;
+}
+tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+if (tty)
+    fclose(tty);
+return 0;
 }
