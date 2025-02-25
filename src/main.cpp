@@ -183,6 +183,7 @@ std::string processEchoLine(const std::string &line) {
 }
 
 
+
 void handleCdCommand(const std::vector<std::string>& args) {
     std::string targetDir;
     if (args.size() < 2) {
