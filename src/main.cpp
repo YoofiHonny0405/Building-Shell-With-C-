@@ -1,11 +1,3 @@
-To address the issue with the extra space at the end of the output string and ensure that the prompt and command output are handled correctly, we need to make a few adjustments:
-
-1. **Ensure the prompt is correctly handled and not included in the command output.**
-2. **Trim the input string to remove any trailing spaces before processing.**
-
-Let's make these adjustments to the code:
-
-```cpp
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -277,15 +269,18 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
-    // Open /dev/tty for prompt output.
+
+    // Open the controlling terminal for prompt output.
     FILE *tty = fopen("/dev/tty", "w");
+
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
     while (true) {
-        // Write prompt to /dev/tty so it isn't redirected.
+        // Print prompt to /dev/tty (if available).
         if (tty) {
             fprintf(tty, "$ ");
             fflush(tty);
@@ -303,7 +298,7 @@ int main() {
                     fprintf(tty, "\r$ %s", input.c_str());
                     fflush(tty);
                 }
-            } else if (c == 127) { // Handle backspace.
+            } else if (c == 127) { // Backspace.
                 if (!input.empty()) {
                     input.pop_back();
                     if (tty) {
@@ -323,7 +318,6 @@ int main() {
             break;
         if (input == "exit 0\n")
             break;
-        input = trim(input); // Trim the input to remove any trailing spaces
         Command cmd = parseCommand(input);
         if (cmd.args.empty())
             continue;
@@ -491,7 +485,7 @@ int main() {
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
-                                                if (!fs::exists(errorPath.parent_path()))
+                        if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
                         std::cerr << "Failed to create directory for error file: "
@@ -537,6 +531,7 @@ int main() {
             }
         }
     }
+
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     if (tty)
         fclose(tty);
