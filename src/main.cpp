@@ -279,28 +279,13 @@ int main() {
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    // In your main function, modify the input handling section:
     while (true) {
-    // Only print the prompt if STDIN is a terminal.
-    if (isatty(STDIN_FILENO) && tty) {
-        fprintf(tty, "$ ");
-        fflush(tty);
-    }
-    std::string input;
-    
-    // Read the entire line at once instead of character by character
-    std::string line;
-    if (!std::getline(std::cin, line)) {
-        break; // EOF
-    }
-    
-    input = line;
-    
-    if (input.empty())
-        continue;
-        
-    // Rest of your code...
-
+        // Only print the prompt if STDIN is a terminal.
+        if (isatty(STDIN_FILENO) && tty) {
+            fprintf(tty, "$ ");
+            fflush(tty);
+        }
+        std::string input;
         char c;
         while (true) {
             c = getchar();
