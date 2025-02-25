@@ -263,6 +263,7 @@ void builtin_ls(const std::vector<std::string>& args) {
             std::cout << fs::path(path).filename().string() << std::endl;
         }
     }
+    std::cout << std::endl;
 }
 
 int main() {
