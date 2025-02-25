@@ -281,6 +281,9 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
     while (true) {
         // Write prompt to /dev/tty so it isn't redirected.
+        std::cout << std::flush;
+        std::cerr << std::flush;
+
         if (tty) {
             fprintf(tty, "$ ");
             fflush(tty);
