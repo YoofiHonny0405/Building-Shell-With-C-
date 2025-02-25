@@ -280,8 +280,8 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Only print the prompt if STDOUT is a terminal.
-        if (tty && isatty(STDOUT_FILENO)) {
+        // Print prompt only if STDIN is a terminal.
+        if (isatty(STDIN_FILENO) && tty) {
             fprintf(tty, "$ ");
             fflush(tty);
         }
@@ -294,21 +294,21 @@ int main() {
                 break;
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                if (tty && isatty(STDOUT_FILENO)) {
+                if (isatty(STDIN_FILENO) && tty) {
                     fprintf(tty, "\r$ %s", input.c_str());
                     fflush(tty);
                 }
             } else if (c == 127) { // Handle backspace.
                 if (!input.empty()) {
                     input.pop_back();
-                    if (tty && isatty(STDOUT_FILENO)) {
+                    if (isatty(STDIN_FILENO) && tty) {
                         fprintf(tty, "\r$ %s", input.c_str());
                         fflush(tty);
                     }
                 }
             } else {
                 input.push_back(c);
-                if (tty && isatty(STDOUT_FILENO)) {
+                if (isatty(STDIN_FILENO) && tty) {
                     fputc(c, tty);
                     fflush(tty);
                 }
@@ -338,7 +338,6 @@ int main() {
             continue;
         }
         if (command == "ls") {
-            // Execute builtin ls in a child process.
             pid_t pid = fork();
             if (pid == 0) {
                 if (!cmd.outputFile.empty()) {
