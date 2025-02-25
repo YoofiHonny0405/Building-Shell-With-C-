@@ -17,9 +17,6 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <cstdio>
-#include <ios>
-#include <ostream>
-#include <cstddef>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -280,7 +277,7 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt only if STDIN is a terminal.
+        // Only print the prompt if STDIN is a terminal.
         if (isatty(STDIN_FILENO) && tty) {
             fprintf(tty, "$ ");
             fflush(tty);
