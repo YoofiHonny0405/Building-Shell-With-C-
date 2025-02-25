@@ -1,4 +1,9 @@
-Certainly! Below is the complete code with all the necessary adjustments to ensure that the prompt and command output are handled correctly, and the input is trimmed properly to avoid any trailing spaces.
+To address the issue with the extra space at the end of the output string and ensure that the prompt and command output are handled correctly, we need to make a few adjustments:
+
+1. **Ensure the prompt is correctly handled and not included in the command output.**
+2. **Trim the input string to remove any trailing spaces before processing.**
+
+Let's make these adjustments to the code:
 
 ```cpp
 #include <iostream>
@@ -281,9 +286,6 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
     while (true) {
         // Write prompt to /dev/tty so it isn't redirected.
-        std::cout << std::flush;
-        std::cerr << std::flush;
-
         if (tty) {
             fprintf(tty, "$ ");
             fflush(tty);
@@ -489,10 +491,10 @@ int main() {
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
-                        if (!fs::exists(errorPath.parent_path()))
+                                                if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                                                std::cerr << "Failed to create directory for error file: "
+                        std::cerr << "Failed to create directory for error file: "
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
