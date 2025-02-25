@@ -138,6 +138,7 @@ Command parseCommand(const std::string& input) {
     return cmd;
 }
 
+
 std::string processEchoLine(const std::string &line) {
     std::string out;
     bool inDouble = false, inSingle = false, escaped = false;
@@ -180,6 +181,7 @@ std::string processEchoLine(const std::string &line) {
         out.pop_back();
     return out;
 }
+
 
 void handleCdCommand(const std::vector<std::string>& args) {
     std::string targetDir;
