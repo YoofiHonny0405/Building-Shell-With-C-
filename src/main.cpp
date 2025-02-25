@@ -270,7 +270,7 @@ int main() {
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
 
-    // Open the controlling terminal for prompt output.
+    // Open /dev/tty for prompt output.
     FILE *tty = fopen("/dev/tty", "w");
 
     termios oldt, newt;
@@ -280,11 +280,8 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt to /dev/tty (if available).
-        std::cout << std::flush;
-        std::cerr << std::flush;
-
-        if (tty) {
+        // Only print the prompt if STDIN is a terminal.
+        if (isatty(STDIN_FILENO) && tty) {
             fprintf(tty, "$ ");
             fflush(tty);
         }
@@ -297,21 +294,21 @@ int main() {
                 break;
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                if (tty) {
+                if (isatty(STDIN_FILENO) && tty) {
                     fprintf(tty, "\r$ %s", input.c_str());
                     fflush(tty);
                 }
-            } else if (c == 127) { // Backspace.
+            } else if (c == 127) { // Handle backspace.
                 if (!input.empty()) {
                     input.pop_back();
-                    if (tty) {
+                    if (isatty(STDIN_FILENO) && tty) {
                         fprintf(tty, "\r$ %s", input.c_str());
                         fflush(tty);
                     }
                 }
             } else {
                 input.push_back(c);
-                if (tty) {
+                if (isatty(STDIN_FILENO) && tty) {
                     fputc(c, tty);
                     fflush(tty);
                 }
@@ -341,7 +338,6 @@ int main() {
             continue;
         }
         if (command == "ls") {
-            // Execute builtin ls in a child process.
             pid_t pid = fork();
             if (pid == 0) {
                 if (!cmd.outputFile.empty()) {
