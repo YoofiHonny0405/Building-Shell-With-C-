@@ -277,7 +277,7 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt only if STDOUT is a terminal.
+        // Print prompt only if STDOUT is a terminal and we are waiting for input.
         if (isatty(STDOUT_FILENO) && tty) {
             fprintf(tty, "$ ");
             fflush(tty);
@@ -336,6 +336,7 @@ int main() {
         if (command == "ls") {
             pid_t pid = fork();
             if (pid == 0) {
+                // Handle output redirection
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
@@ -356,6 +357,7 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
+                // Handle error redirection
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
@@ -387,6 +389,7 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
+                // Ensure the prompt is not printed here
                 continue;
             }
         }
