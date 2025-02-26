@@ -283,8 +283,6 @@ int main() {
             fprintf(tty, "$ ");
             fflush(tty);
         }
-    
-        // Read user input
         std::string input;
         char c;
         while (true) {
@@ -313,17 +311,13 @@ int main() {
                 }
             }
         }
-    
-        // Execute the command
         if (feof(stdin))
             break;
         if (input == "exit 0")
             break;
-    
         Command cmd = parseCommand(input);
         if (cmd.args.empty())
             continue;
-    
         std::string command = unescapePath(cmd.args[0]);
         if (command == "cd") {
             handleCdCommand(cmd.args);
@@ -343,12 +337,12 @@ int main() {
         if (command == "ls") {
             pid_t pid = fork();
             if (pid == 0) {
+                // Redirect stderr to /dev/null to suppress debug prints
                 int devNull = open("/dev/null", O_WRONLY);
                 if (devNull != -1) {
                     dup2(devNull, STDERR_FILENO);
                     close(devNull);
                 }
-            }
         
                 // Handle output redirection
                 if (!cmd.outputFile.empty()) {
