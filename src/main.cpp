@@ -229,8 +229,9 @@ void handleTypeCommand(const std::string& command, const std::unordered_set<std:
 
 std::string autocomplete(const std::string& input, const std::unordered_set<std::string>& builtins) {
     for (const auto& builtin : builtins) {
-        if (builtin.find(input) == 0)
-            return builtin + " ";
+        if (builtin.find(input) == 0) {
+            return builtin + " "; // Add a space after the completed command
+        }
     }
     return input;
 }
