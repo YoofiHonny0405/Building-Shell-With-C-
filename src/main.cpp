@@ -336,6 +336,13 @@ int main() {
         if (command == "ls") {
             pid_t pid = fork();
             if (pid == 0) {
+                // Redirect stderr to /dev/null to suppress debug prints
+                int devNull = open("/dev/null", O_WRONLY);
+                if (devNull != -1) {
+                    dup2(devNull, STDERR_FILENO);
+                    close(devNull);
+                }
+        
                 // Handle output redirection
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
@@ -378,12 +385,6 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
-                } else {
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if (devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
                 }
         
                 // Execute ls
@@ -392,7 +393,6 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                // Ensure no prompt is printed here
                 continue;
             }
         }
