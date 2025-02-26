@@ -270,6 +270,7 @@ int main() {
     // Open /dev/tty for prompt output.
     FILE *tty = fopen("/dev/tty", "w");
 
+    // Set terminal to raw mode for TAB handling.
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
@@ -277,8 +278,9 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt only if STDOUT is a terminal.
+        // Only print the prompt if STDOUT is a terminal.
         if (isatty(STDOUT_FILENO) && tty) {
+            // Print prompt to tty.
             fprintf(tty, "$ ");
             fflush(tty);
         }
@@ -312,6 +314,9 @@ int main() {
         }
         if (feof(stdin))
             break;
+        // Remove any leading prompt if accidentally included.
+        if (input.rfind("$ ", 0) == 0)
+            input = input.substr(2);
         if (input == "exit 0")
             break;
         Command cmd = parseCommand(input);
@@ -448,7 +453,8 @@ int main() {
                 waitpid(pid, &status, 0);
                 std::fflush(stderr);
             }
-        } else {
+        }
+        else {
             // External commands.
             pid_t pid = fork();
             if (pid == -1) {
@@ -480,7 +486,6 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                                            } catch (const fs::filesystem_error &e) {
                         std::cerr << "Failed to create directory for error file: "
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
@@ -494,7 +499,8 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
-                } else {
+                }
+                else {
                     int devNull = open("/dev/null", O_WRONLY);
                     if (devNull != -1) {
                         dup2(devNull, STDERR_FILENO);
