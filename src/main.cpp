@@ -336,6 +336,13 @@ int main() {
         if (command == "ls") {
             pid_t pid = fork();
             if (pid == 0) {
+                // Debug print
+                std::cerr << "Executing ls command with args: ";
+                for (const auto& arg : cmd.args) {
+                    std::cerr << arg << " ";
+                }
+                std::cerr << std::endl;
+        
                 // Handle output redirection
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
@@ -348,7 +355,7 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int out_fd = open(cmd.outputFile.c_str(),
-                                      O_WRONLY | O_CREAT | O_CLOEXEC | (cmd.appendOutput ? O_APPEND : O_TRUNC),
+                                      O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
                                       0644);
                     if (out_fd == -1) {
                         std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
@@ -357,6 +364,7 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
+        
                 // Handle error redirection
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
@@ -384,12 +392,14 @@ int main() {
                         close(devNull);
                     }
                 }
+        
+                // Execute ls
                 builtin_ls(cmd.args);
                 exit(0);
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                // Ensure the prompt is not printed here
+                // Ensure no prompt is printed here
                 continue;
             }
         }
