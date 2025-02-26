@@ -336,13 +336,6 @@ int main() {
         if (command == "ls") {
             pid_t pid = fork();
             if (pid == 0) {
-                // Debug print
-                std::cerr << "Executing ls command with args: ";
-                for (const auto& arg : cmd.args) {
-                    std::cerr << arg << " ";
-                }
-                std::cerr << std::endl;
-        
                 // Handle output redirection
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
