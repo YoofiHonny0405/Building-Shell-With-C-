@@ -268,8 +268,9 @@ int main() {
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
 
-    // Open /dev/tty for prompt output.
-    FILE *tty = fopen("/dev/tty", "w");
+    // Determine if the shell is interactive
+    int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+    FILE *tty = interactive ? fopen("/dev/tty", "w") : nullptr;
 
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
@@ -278,12 +279,11 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt only if STDOUT is a terminal and we are waiting for input.
-        if (isatty(STDOUT_FILENO) && tty) {
+        // Print prompt only in interactive mode
+        if (interactive && tty) {
             fprintf(tty, "$ ");
             fflush(tty);
         }
-    
         // Read user input
         std::string input;
         char c;
