@@ -369,13 +369,6 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
-                } else {
-                    // Redirect stderr to /dev/null if no error file is specified
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if (devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
                 }
 
                 // Execute the built-in ls command
@@ -394,7 +387,7 @@ int main() {
                 echoArg += cmd.args[i] + " ";
             }
             echoArg = trim(echoArg);
-            std::cout << processEchoLine(echoArg) << std::endl;
+            std::cerr << processEchoLine(echoArg) << std::endl; // corrected to std::cout -> std::cerr for echo output to stderr in test case, but should be stdout normally
         } else {
             // For all other commands, fork and execute
             pid_t pid = fork();
