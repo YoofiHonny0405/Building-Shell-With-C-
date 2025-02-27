@@ -324,7 +324,7 @@ int main() {
                 std::cerr << "type: missing operand" << std::endl;
         } else if (command == "exit") {
             break;
-        } } else if (command == "ls") {
+        } else if (command == "ls") {
             pid_t pid = fork();
             if (pid == 0) {
                 // Handle output redirection
@@ -384,7 +384,8 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-            }else if (command == "echo") {
+            }
+        }else if (command == "echo") {
             std::string echoArg;
             for (size_t i = 1; i < cmd.args.size(); ++i) {
                 echoArg += cmd.args[i] + " ";
