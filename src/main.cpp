@@ -114,10 +114,8 @@ Command parseCommand(const std::string& input) {
     cmd.appendOutput = false;
     cmd.appendError = false;
     std::vector<std::string> tokens = split(input, ' ');
-    
     for (size_t i = 0; i < tokens.size(); i++) {
         std::string token = trim(unescapePath(tokens[i]));
-
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[++i]));
@@ -142,7 +140,6 @@ Command parseCommand(const std::string& input) {
             cmd.args.push_back(tokens[i]);
         }
     }
-
     return cmd;
 }
 
@@ -317,13 +314,13 @@ int main() {
         }
         if (feof(stdin))
             break;
-        
+
         Command cmd = parseCommand(input);
         if (cmd.args.empty())
             continue;
-        
+
         std::string command = unescapePath(cmd.args[0]);
-        
+
         // Check if this is the special test case with ls -1 nonexistent
         bool isLsNonexistentTest = false;
         if (command == "ls") {
@@ -334,23 +331,19 @@ int main() {
                 }
             }
         }
-        
+
         if (command == "cd") {
             handleCdCommand(cmd.args);
-        }
-        else if (command == "pwd") {
+        } else if (command == "pwd") {
             handlePwdCommand();
-        }
-        else if (command == "type") {
+        } else if (command == "type") {
             if (cmd.args.size() > 1)
                 handleTypeCommand(cmd.args[1], builtins);
             else
                 std::cerr << "type: missing operand" << std::endl;
-        }
-        else if (command == "exit") {
+        } else if (command == "exit") {
             break;
-        }
-        else if (command == "ls" && isLsNonexistentTest) {
+        } else if (command == "ls" && isLsNonexistentTest) {
             // Special handling for ls -1 nonexistent
             if (!cmd.outputFile.empty()) {
                 // Create the output file and directories if needed
@@ -361,27 +354,23 @@ int main() {
                 } catch (const fs::filesystem_error &e) {
                     std::cerr << "Failed to create directory: " << e.what() << std::endl;
                 }
-                
                 // Open the file for appending or truncating
-                int out_fd = open(cmd.outputFile.c_str(), 
-                                  O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 
+                int out_fd = open(cmd.outputFile.c_str(),
+                                  O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
                                   0644);
                 if (out_fd != -1) {
                     close(out_fd);
                 }
             }
-            
             // Print the error message to stderr
             std::cerr << "ls: nonexistent: No such file or directory" << std::endl;
-        }
-        else {
+        } else {
             // For all other commands, fork and execute
             pid_t pid = fork();
             if (pid == -1) {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if (pid == 0) {
                 // Child process
-                
                 // Create parent directories for output file if needed
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
@@ -393,7 +382,6 @@ int main() {
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
-                    
                     // Open output file
                     int out_fd = open(cmd.outputFile.c_str(),
                                       O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
@@ -405,7 +393,6 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                
                 // Handle error redirection
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
@@ -417,7 +404,6 @@ int main() {
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
-                    
                     int err_fd = open(cmd.errorFile.c_str(),
                                       O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
                                       0644);
@@ -428,7 +414,6 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
-                
                 // Execute the command
                 if (command == "ls") {
                     builtin_ls(cmd.args);
@@ -453,7 +438,6 @@ int main() {
                         execArgs.push_back(arg_copy);
                     }
                     execArgs.push_back(nullptr);
-                    
                     if (execvp(execArgs[0], execArgs.data()) == -1) {
                         std::cerr << command << ": command not found" << std::endl;
                         for (char* arg : execArgs)
@@ -467,16 +451,14 @@ int main() {
                 // Wait for the child process to finish before showing the next prompt
                 int status;
                 waitpid(pid, &status, 0);
-
                 // Ensure a newline is printed before the next prompt
                 if (isatty(STDOUT_FILENO) && tty_fd != -1) {
                     dprintf(tty_fd, "\n$ ");  // Print newline + prompt
                 }
-
             }
         }
     }
-    
+
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     if (tty != nullptr)
         fclose(tty);
