@@ -356,6 +356,8 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
+        
+                // Handle error redirection
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
@@ -375,8 +377,15 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
+                } else {
+                    // Redirect stderr to /dev/null if no error file is specified
+                    int devNull = open("/dev/null", O_WRONLY);
+                    if (devNull != -1) {
+                        dup2(devNull, STDERR_FILENO);
+                        close(devNull);
+                    }
                 }
-                // Execute builtin ls.
+        
                 builtin_ls(cmd.args);
                 exit(0);
             } else {
