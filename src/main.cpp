@@ -41,7 +41,6 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
         }
         if (c == '\\') {
             escapeNext = true;
-            token.push_back(c);
             continue;
         }
         if (c == '\'' && !inDouble) {
@@ -236,11 +235,21 @@ void handleTypeCommand(const std::string& command, const std::unordered_set<std:
 }
 
 std::string autocomplete(const std::string& input, const std::unordered_set<std::string>& builtins) {
+    std::vector<std::string> matches;
     for (const auto& builtin : builtins) {
         if (builtin.find(input) == 0)
-            return builtin + " "; // Add a trailing space.
+            matches.push_back(builtin);
     }
-    return input;
+    if (matches.size() == 1) {
+        return matches[0] + " "; // Return the single match with a trailing space.
+    } else if (matches.size() > 1) {
+        std::cout << "Suggestions: ";
+        for (const auto& match : matches) {
+            std::cout << match << " ";
+        }
+        std::cout << std::endl;
+    }
+    return input; // Return the original input if no matches or multiple matches.
 }
 
 void builtin_ls(const std::vector<std::string>& args) {
@@ -346,7 +355,7 @@ int main() {
                 std::cerr << "type: missing operand" << std::endl;
         } else if (command == "exit") {
             break;
-        } if (command == "ls" && isLsNonexistentTest) {
+        } else if (command == "ls" && isLsNonexistentTest) {
             // Special handling for ls -1 nonexistent
             if (!cmd.outputFile.empty()) {
                 // Create the output file and directories if needed
@@ -397,7 +406,10 @@ int main() {
                         std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
                         exit(EXIT_FAILURE);
                     }
-                    dup2(out_fd, STDOUT_FILENO);
+                    if (dup2(out_fd, STDOUT_FILENO) == -1) {
+                        std::cerr << "Failed to redirect stdout: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
                     close(out_fd);
                 }
 
@@ -420,7 +432,10 @@ int main() {
                         std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
                         exit(EXIT_FAILURE);
                     }
-                    dup2(err_fd, STDERR_FILENO);
+                    if (dup2(err_fd, STDERR_FILENO) == -1) {
+                        std::cerr << "Failed to redirect stderr: " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
                     close(err_fd);
                 }
 
