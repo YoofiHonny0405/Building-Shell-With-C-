@@ -384,8 +384,7 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-            }
-        }else if (command == "echo") {
+            }else if (command == "echo") {
             std::string echoArg;
             for (size_t i = 1; i < cmd.args.size(); ++i) {
                 echoArg += cmd.args[i] + " ";
