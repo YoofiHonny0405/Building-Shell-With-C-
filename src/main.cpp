@@ -114,8 +114,10 @@ Command parseCommand(const std::string& input) {
     cmd.appendOutput = false;
     cmd.appendError = false;
     std::vector<std::string> tokens = split(input, ' ');
+    
     for (size_t i = 0; i < tokens.size(); i++) {
         std::string token = trim(unescapePath(tokens[i]));
+
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[++i]));
@@ -140,6 +142,7 @@ Command parseCommand(const std::string& input) {
             cmd.args.push_back(tokens[i]);
         }
     }
+
     return cmd;
 }
 
@@ -325,7 +328,7 @@ int main() {
         bool isLsNonexistentTest = false;
         if (command == "ls") {
             for (size_t i = 1; i < cmd.args.size(); i++) {
-                if (i+1 < cmd.args.size() && cmd.args[i] == "-1" && cmd.args[i+1] == "nonexistent") {
+                if (i + 1 < cmd.args.size() && cmd.args[i] == "-1" && cmd.args[i + 1] == "nonexistent") {
                     isLsNonexistentTest = true;
                     break;
                 }
@@ -354,6 +357,7 @@ int main() {
                 } catch (const fs::filesystem_error &e) {
                     std::cerr << "Failed to create directory: " << e.what() << std::endl;
                 }
+
                 // Open the file for appending or truncating
                 int out_fd = open(cmd.outputFile.c_str(),
                                   O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
@@ -362,6 +366,7 @@ int main() {
                     close(out_fd);
                 }
             }
+
             // Print the error message to stderr
             std::cerr << "ls: nonexistent: No such file or directory" << std::endl;
         } else {
@@ -371,6 +376,7 @@ int main() {
                 std::cerr << "Failed to fork process" << std::endl;
             } else if (pid == 0) {
                 // Child process
+
                 // Create parent directories for output file if needed
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
@@ -382,6 +388,7 @@ int main() {
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
+
                     // Open output file
                     int out_fd = open(cmd.outputFile.c_str(),
                                       O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
@@ -393,6 +400,7 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
+
                 // Handle error redirection
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
@@ -404,6 +412,7 @@ int main() {
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
+
                     int err_fd = open(cmd.errorFile.c_str(),
                                       O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
                                       0644);
@@ -414,6 +423,7 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
+
                 // Execute the command
                 if (command == "ls") {
                     builtin_ls(cmd.args);
@@ -438,6 +448,7 @@ int main() {
                         execArgs.push_back(arg_copy);
                     }
                     execArgs.push_back(nullptr);
+
                     if (execvp(execArgs[0], execArgs.data()) == -1) {
                         std::cerr << command << ": command not found" << std::endl;
                         for (char* arg : execArgs)
@@ -448,7 +459,6 @@ int main() {
                 }
             } else {
                 // Parent process
-                // Wait for the child process to finish before showing the next prompt
                 int status;
                 waitpid(pid, &status, 0);
                 // Ensure a newline is printed before the next prompt
