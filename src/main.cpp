@@ -324,11 +324,11 @@ int main() {
         std::string command = unescapePath(cmd.args[0]);
         
         pid_t pid = fork();
-        if (pid == 0) {
-            // Redirect stdout only if outputFile is specified
+        if (pid == 0) { 
+            // Redirect stdout if specified
             if (!cmd.outputFile.empty()) {
-                int out_fd = open(cmd.outputFile.c_str(),
-                                  O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
+                int out_fd = open(cmd.outputFile.c_str(), 
+                                  O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 
                                   0644);
                 if (out_fd == -1) {
                     std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
@@ -338,10 +338,10 @@ int main() {
                 close(out_fd);
             }
         
-            // Redirect stderr only if errorFile is explicitly set
+            // Redirect stderr only if explicitly requested
             if (!cmd.errorFile.empty()) {
-                int err_fd = open(cmd.errorFile.c_str(),
-                                  O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
+                int err_fd = open(cmd.errorFile.c_str(), 
+                                  O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 
                                   0644);
                 if (err_fd == -1) {
                     std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
@@ -351,6 +351,7 @@ int main() {
                 close(err_fd);
             }
         
+            // Execute the command
             std::vector<char*> execArgs;
             for (const auto& arg : cmd.args) {
                 execArgs.push_back(strdup(arg.c_str()));
