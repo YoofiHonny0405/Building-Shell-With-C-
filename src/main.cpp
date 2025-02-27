@@ -270,10 +270,10 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
-    
+
     // Determine if the shell is interactive
     int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
-    
+
     // Open /dev/tty for prompt output only if interactive
     FILE *tty = interactive ? fopen("/dev/tty", "w") : nullptr;
     int tty_fd = interactive ? open("/dev/tty", O_WRONLY) : -1;
@@ -486,7 +486,7 @@ int main() {
                     }
                 }
             }
-        
+
         }
     }
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
