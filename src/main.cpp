@@ -17,6 +17,9 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <cstdio>
+#include <ios>
+#include <ostream>
+#include <cstddef>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -276,13 +279,16 @@ int main() {
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
+    bool firstPrompt = true;
     while (true) {
-        // Print prompt only to /dev/tty (and only if available).
-        if (tty)
-        {
+        // Print prompt only if STDOUT is a terminal and we are in interactive mode.
+        if (isatty(STDOUT_FILENO) && tty) {
+            if (!firstPrompt)
+                fprintf(tty, "\n");
             fprintf(tty, "$ ");
             fflush(tty);
         }
+        firstPrompt = false;
         std::string input;
         char c;
         while (true) {
@@ -291,21 +297,21 @@ int main() {
                 break; // Do not add newline to input.
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                if (tty) {
+                if (isatty(STDOUT_FILENO) && tty) {
                     fprintf(tty, "\r$ %s", input.c_str());
                     fflush(tty);
                 }
             } else if (c == 127) { // Handle backspace.
                 if (!input.empty()) {
                     input.pop_back();
-                    if (tty) {
+                    if (isatty(STDOUT_FILENO) && tty) {
                         fprintf(tty, "\r$ %s", input.c_str());
                         fflush(tty);
                     }
                 }
             } else {
                 input.push_back(c);
-                if (tty) {
+                if (isatty(STDOUT_FILENO) && tty) {
                     fputc(c, tty);
                     fflush(tty);
                 }
@@ -450,8 +456,7 @@ int main() {
                 waitpid(pid, &status, 0);
                 std::fflush(stderr);
             }
-        }
-        else {
+        } else {
             // External commands.
             pid_t pid = fork();
             if (pid == -1) {
@@ -525,7 +530,7 @@ int main() {
             }
         }
     }
-    
+
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     if (tty)
         fclose(tty);
