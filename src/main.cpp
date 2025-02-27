@@ -95,7 +95,7 @@ std::string findExecutable(const std::string &command) {
 
 std::string trim(const std::string &s) {
     size_t start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string::npos)
+    if(start == std::string::npos)
         return "";
     size_t end = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
@@ -270,10 +270,10 @@ int main() {
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
 
-    // Open /dev/tty for prompt output using open() so that the prompt is written
-    // to the controlling terminal and not captured by redirection.
+    // Open /dev/tty for prompt output.
+    FILE *tty = fopen("/dev/tty", "w");
     int tty_fd = open("/dev/tty", O_WRONLY);
-    
+
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
@@ -376,27 +376,13 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
-                else {
-                    // Do not redirect stderr for external commands if no explicit redirection.
-                }
-                std::vector<char*> execArgs;
-                for (const auto& arg : cmd.args) {
-                    std::string unescaped = unescapePath(arg);
-                    char* arg_copy = strdup(unescaped.c_str());
-                    execArgs.push_back(arg_copy);
-                }
-                execArgs.push_back(nullptr);
-                if (execvp(execArgs[0], execArgs.data()) == -1) {
-                    std::cerr << command << ": command not found" << std::endl;
-                    for (char* arg : execArgs)
-                        if (arg)
-                            free(arg);
-                    exit(EXIT_FAILURE);
-                }
+                // Execute builtin ls.
+                builtin_ls(cmd.args);
+                exit(0);
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                std::fflush(stderr);
+                continue;
             }
         }
         if (command == "echo") {
@@ -529,6 +515,8 @@ int main() {
     
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     if (tty != nullptr)
+        fclose(tty);
+    if (tty_fd != -1)
         close(tty_fd);
     return 0;
 }
