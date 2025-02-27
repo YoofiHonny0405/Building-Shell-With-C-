@@ -334,6 +334,47 @@ int main() {
                 }
             }
         }
+        if (pid == 0) {
+            // Redirect stdout only if outputFile is specified
+            if (!cmd.outputFile.empty()) {
+                int out_fd = open(cmd.outputFile.c_str(),
+                                  O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
+                                  0644);
+                if (out_fd == -1) {
+                    std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                dup2(out_fd, STDOUT_FILENO); // Redirect stdout to file
+                close(out_fd);
+            }
+        
+            // IMPORTANT: Do NOT redirect stderr unless explicitly told (fixing the test case)
+            if (!cmd.errorFile.empty()) {
+                int err_fd = open(cmd.errorFile.c_str(),
+                                  O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
+                                  0644);
+                if (err_fd == -1) {
+                    std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                dup2(err_fd, STDERR_FILENO); // Redirect stderr to error file
+                close(err_fd);
+            }
+        
+            // Execute the command
+            std::vector<char*> execArgs;
+            for (const auto& arg : cmd.args) {
+                execArgs.push_back(strdup(arg.c_str()));
+            }
+            execArgs.push_back(nullptr);
+        
+            execvp(execArgs[0], execArgs.data());
+        
+            // If execvp fails, show error in stderr
+            std::cerr << cmd.args[0] << ": command not found" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        
         
         if (command == "cd") {
             handleCdCommand(cmd.args);
@@ -428,7 +469,7 @@ int main() {
                 }
                 
                 // Execute the command
-                if (command == "ls") {
+                else if (command == "ls") {
                     builtin_ls(cmd.args);
                     exit(0);
                 } else if (command == "echo") {
