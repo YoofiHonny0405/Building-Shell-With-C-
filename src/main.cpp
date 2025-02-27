@@ -141,6 +141,10 @@ Command parseCommand(const std::string& input) {
         }
     }
 
+    // DO NOT apply stderr redirection unless explicitly stated (fixing test case)
+    return cmd;
+}
+
     // If output redirection is used but stderr is missing, append it.
     if (!cmd.outputFile.empty() && cmd.errorFile.empty()) {
         cmd.errorFile = cmd.outputFile;
@@ -330,7 +334,7 @@ int main() {
         
         pid_t pid = fork();
         if (pid == 0) {
-            // Redirect stdout if needed
+            // Redirect stdout only if outputFile is specified
             if (!cmd.outputFile.empty()) {
                 int out_fd = open(cmd.outputFile.c_str(),
                                   O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
@@ -343,7 +347,7 @@ int main() {
                 close(out_fd);
             }
         
-            // Redirect stderr if needed
+            // Redirect stderr only if errorFile is explicitly set
             if (!cmd.errorFile.empty()) {
                 int err_fd = open(cmd.errorFile.c_str(),
                                   O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
@@ -363,7 +367,7 @@ int main() {
             execArgs.push_back(nullptr);
         
             execvp(execArgs[0], execArgs.data());
-            
+        
             std::cerr << cmd.args[0] << ": command not found" << std::endl;
             exit(EXIT_FAILURE);
         }
