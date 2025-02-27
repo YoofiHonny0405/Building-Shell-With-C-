@@ -348,7 +348,7 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-        
+
                 // Handle error redirection
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
@@ -377,15 +377,18 @@ int main() {
                         close(devNull);
                     }
                 }
-        
+
                 // Execute the built-in ls command
                 builtin_ls(cmd.args);
                 exit(0);
             } else {
                 int status;
                 waitpid(pid, &status, 0);
+                if (isatty(STDOUT_FILENO) && tty_fd != -1) {
+                    std::cout << std::endl;
+                }
             }
-        }else if (command == "echo") {
+        } else if (command == "echo") {
             std::string echoArg;
             for (size_t i = 1; i < cmd.args.size(); ++i) {
                 echoArg += cmd.args[i] + " ";
@@ -462,9 +465,8 @@ int main() {
                 // Wait for the child process to finish before showing the next prompt
                 int status;
                 waitpid(pid, &status, 0);
-                // Ensure a newline is printed before the next prompt
                 if (isatty(STDOUT_FILENO) && tty_fd != -1) {
-                    dprintf(tty_fd, "\n$ ");  // Print newline + prompt
+                    std::cout << std::endl;
                 }
             }
         }
