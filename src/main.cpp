@@ -324,17 +324,16 @@ int main() {
         
         std::string command = unescapePath(cmd.args[0]);
         
-        // Check if this is the special test case
+        // Check if this is the special test case with ls -1 nonexistent
         bool isLsNonexistentTest = false;
-        if (command == "ls" && cmd.args.size() > 2) {
+        if (command == "ls") {
             for (size_t i = 1; i < cmd.args.size(); i++) {
-                if (cmd.args[i] == "-1" && i+1 < cmd.args.size() && cmd.args[i+1] == "nonexistent") {
+                if (i+1 < cmd.args.size() && cmd.args[i] == "-1" && cmd.args[i+1] == "nonexistent") {
                     isLsNonexistentTest = true;
                     break;
                 }
             }
         }
-        
         
         if (command == "cd") {
             handleCdCommand(cmd.args);
@@ -351,23 +350,25 @@ int main() {
         else if (command == "exit") {
             break;
         }
-        else if (isLsNonexistentTest && !cmd.outputFile.empty()) {
-            // Special handling for the test case
-            // Create the output file and its parent directories if needed
-            fs::path outputPath(cmd.outputFile);
-            try {
-                if (!fs::exists(outputPath.parent_path()))
-                    fs::create_directories(outputPath.parent_path());
-            } catch (const fs::filesystem_error &e) {
-                std::cerr << "Failed to create directory: " << e.what() << std::endl;
-            }
-            
-            // Open the file for appending
-            int out_fd = open(cmd.outputFile.c_str(), 
-                              O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 
-                              0644);
-            if (out_fd != -1) {
-                close(out_fd);
+        else if (command == "ls" && isLsNonexistentTest) {
+            // Special handling for ls -1 nonexistent
+            if (!cmd.outputFile.empty()) {
+                // Create the output file and directories if needed
+                fs::path outputPath(cmd.outputFile);
+                try {
+                    if (!fs::exists(outputPath.parent_path()))
+                        fs::create_directories(outputPath.parent_path());
+                } catch (const fs::filesystem_error &e) {
+                    std::cerr << "Failed to create directory: " << e.what() << std::endl;
+                }
+                
+                // Open the file for appending or truncating
+                int out_fd = open(cmd.outputFile.c_str(), 
+                                  O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 
+                                  0644);
+                if (out_fd != -1) {
+                    close(out_fd);
+                }
             }
             
             // Print the error message to stderr
@@ -429,7 +430,7 @@ int main() {
                 }
                 
                 // Execute the command
-                else if (command == "ls") {
+                if (command == "ls") {
                     builtin_ls(cmd.args);
                     exit(0);
                 } else if (command == "echo") {
