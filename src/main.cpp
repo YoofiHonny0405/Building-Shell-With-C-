@@ -268,6 +268,14 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
+        FILE* tty = nullptr;  // Declare tty before using it
+
+    // Example: If tty is meant to interact with the terminal, initialize it
+        tty = fopen("/dev/tty", "w");
+        if (!tty) {
+            perror("fopen");
+            return 1;
+        }
         // Print the prompt to /dev/tty if possible
         if (isatty(STDOUT_FILENO) && tty_fd >= 0) {
             dprintf(tty_fd, "$ ");
