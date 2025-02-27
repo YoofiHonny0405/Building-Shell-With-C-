@@ -208,8 +208,9 @@ void builtin_ls(const std::vector<std::string>& args) {
     }
     for (size_t i = 1; i < args.size(); ++i) {
         std::string path = args[i];
-        if (!fs::exists(path))
+        if (!fs::exists(path)) {
             std::cerr << "ls: " << path << ": No such file or directory" << std::endl;
+        }
         else if (fs::is_directory(path)) {
             try {
                 for (const auto &entry : fs::directory_iterator(path))
@@ -361,14 +362,25 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(),
-                                      O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
+                                      O_WRONLY | O_CREAT | O_APPEND , // Corrected to O_APPEND here directly
                                       0644);
                     if (err_fd == -1) {
                         std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
                         exit(EXIT_FAILURE);
                     }
-                    dup2(err_fd, STDERR_FILENO);
+                    if (dup2(err_fd, STDERR_FILENO) == -1) {
+                        std::cerr << "Failed to redirect stderr: " << strerror(errno) << std::endl;
+                        close(err_fd);
+                        exit(EXIT_FAILURE);
+                    }
                     close(err_fd);
+                } else {
+                    // Redirect stderr to /dev/null if no error file is specified
+                    int devNull = open("/dev/null", O_WRONLY);
+                    if (devNull != -1) {
+                        dup2(devNull, STDERR_FILENO);
+                        close(devNull);
+                    }
                 }
 
                 // Execute the built-in ls command
@@ -387,7 +399,7 @@ int main() {
                 echoArg += cmd.args[i] + " ";
             }
             echoArg = trim(echoArg);
-            std::cerr << processEchoLine(echoArg) << std::endl; // corrected to std::cout -> std::cerr for echo output to stderr in test case, but should be stdout normally
+            std::cout << processEchoLine(echoArg) << std::endl;
         } else {
             // For all other commands, fork and execute
             pid_t pid = fork();
