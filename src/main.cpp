@@ -145,15 +145,6 @@ Command parseCommand(const std::string& input) {
     return cmd;
 }
 
-    // If output redirection is used but stderr is missing, append it.
-    if (!cmd.outputFile.empty() && cmd.errorFile.empty()) {
-        cmd.errorFile = cmd.outputFile;
-        cmd.appendError = cmd.appendOutput;
-    }
-
-    return cmd;
-}
-
 
 std::string processEchoLine(const std::string &line) {
     std::string out;
