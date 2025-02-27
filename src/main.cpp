@@ -192,7 +192,6 @@ std::string autocomplete(const std::string& input, const std::unordered_set<std:
     for (const auto& builtin : builtins) {
         if (builtin.find(input) == 0)
             return builtin + " "; // Add a trailing space.
-            return builtin + " ";
     }
     return input;
 }
