@@ -112,14 +112,16 @@ struct Command {
 Command parseCommand(const std::string& input) {
     Command cmd;
     std::vector<std::string> tokens = split(input, ' ');
+    
     for (size_t i = 0; i < tokens.size(); i++) {
         std::string token = trim(unescapePath(tokens[i]));
+
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[++i]));
                 cmd.appendOutput = false;
             }
-        } else if (token == "1>>" || token == ">>") {
+        } else if (token == ">>" || token == "1>>") {
             if (i + 1 < tokens.size()) {
                 cmd.outputFile = trim(unescapePath(tokens[++i]));
                 cmd.appendOutput = true;
@@ -138,8 +140,16 @@ Command parseCommand(const std::string& input) {
             cmd.args.push_back(tokens[i]);
         }
     }
+
+    // If output redirection is used but stderr is missing, append it.
+    if (!cmd.outputFile.empty() && cmd.errorFile.empty()) {
+        cmd.errorFile = cmd.outputFile;
+        cmd.appendError = cmd.appendOutput;
+    }
+
     return cmd;
 }
+
 
 std::string processEchoLine(const std::string &line) {
     std::string out;
@@ -320,7 +330,7 @@ int main() {
         
         pid_t pid = fork();
         if (pid == 0) {
-            // Handle redirection before executing command
+            // Redirect stdout if needed
             if (!cmd.outputFile.empty()) {
                 int out_fd = open(cmd.outputFile.c_str(),
                                   O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
@@ -333,6 +343,7 @@ int main() {
                 close(out_fd);
             }
         
+            // Redirect stderr if needed
             if (!cmd.errorFile.empty()) {
                 int err_fd = open(cmd.errorFile.c_str(),
                                   O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
@@ -352,14 +363,11 @@ int main() {
             execArgs.push_back(nullptr);
         
             execvp(execArgs[0], execArgs.data());
-        
-            // If execvp fails
-            std::cerr << command << ": command not found" << std::endl;
+            
+            std::cerr << cmd.args[0] << ": command not found" << std::endl;
             exit(EXIT_FAILURE);
-        } else {
-            int status;
-            waitpid(pid, &status, 0);
         }
+        
         
         if (command == "cd") {
             handleCdCommand(cmd.args);
