@@ -197,41 +197,31 @@ std::string autocomplete(const std::string& input, const std::unordered_set<std:
 }
 
 void builtin_ls(const std::vector<std::string>& args) {
-    // If no paths are provided, list the current directory
     if (args.size() == 1) {
         try {
-            for (const auto &entry : fs::directory_iterator(fs::current_path())) {
+            for (const auto &entry : fs::directory_iterator(fs::current_path()))
                 std::cout << entry.path().filename().string() << std::endl;
-            }
         } catch (const fs::filesystem_error &e) {
             std::cerr << "ls: " << e.what() << std::endl;
         }
         return;
     }
-
-    // Process the paths provided in the arguments
     for (size_t i = 1; i < args.size(); ++i) {
         std::string path = args[i];
-
-        std::cout << "Checking path: " << path << std::endl; // Debugging: Check the paths
-
-        if (!fs::exists(path)) {
+        if (!fs::exists(path))
             std::cerr << "ls: " << path << ": No such file or directory" << std::endl;
-        } else if (fs::is_directory(path)) {
+        else if (fs::is_directory(path)) {
             try {
-                for (const auto &entry : fs::directory_iterator(path)) {
+                for (const auto &entry : fs::directory_iterator(path))
                     std::cout << entry.path().filename().string() << std::endl;
-                }
             } catch (const fs::filesystem_error &e) {
                 std::cerr << "ls: " << e.what() << std::endl;
             }
         } else {
-            // If it's a file, just print the filename
             std::cout << fs::path(path).filename().string() << std::endl;
         }
     }
 }
-
 
 struct Command {
     std::vector<std::string> args;
