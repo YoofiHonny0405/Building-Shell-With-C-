@@ -281,9 +281,8 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt only if STDOUT is a terminal and tty_fd is valid.
         if (isatty(STDOUT_FILENO) && tty_fd != -1) {
-            dprintf(tty_fd, "$ ");
+            dprintf(tty_fd, "$ ");  // Print prompt BEFORE command execution
         }
         std::string input;
         char c;
@@ -312,12 +311,56 @@ int main() {
         }
         if (feof(stdin))
             break;
-        if (input == "exit 0")
-            break;
+        
         Command cmd = parseCommand(input);
         if (cmd.args.empty())
             continue;
+        
         std::string command = unescapePath(cmd.args[0]);
+        
+        pid_t pid = fork();
+        if (pid == 0) {
+            // Handle redirection before executing command
+            if (!cmd.outputFile.empty()) {
+                int out_fd = open(cmd.outputFile.c_str(),
+                                  O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
+                                  0644);
+                if (out_fd == -1) {
+                    std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                dup2(out_fd, STDOUT_FILENO);
+                close(out_fd);
+            }
+        
+            if (!cmd.errorFile.empty()) {
+                int err_fd = open(cmd.errorFile.c_str(),
+                                  O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
+                                  0644);
+                if (err_fd == -1) {
+                    std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                dup2(err_fd, STDERR_FILENO);
+                close(err_fd);
+            }
+        
+            std::vector<char*> execArgs;
+            for (const auto& arg : cmd.args) {
+                execArgs.push_back(strdup(arg.c_str()));
+            }
+            execArgs.push_back(nullptr);
+        
+            execvp(execArgs[0], execArgs.data());
+        
+            // If execvp fails
+            std::cerr << command << ": command not found" << std::endl;
+            exit(EXIT_FAILURE);
+        } else {
+            int status;
+            waitpid(pid, &status, 0);
+        }
+        
         if (command == "cd") {
             handleCdCommand(cmd.args);
             continue;
