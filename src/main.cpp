@@ -270,40 +270,47 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
-    // Open /dev/tty for prompt output.
-    FILE *tty = fopen("/dev/tty", "w");
-    int tty_fd = open("/dev/tty", O_WRONLY);
+    
+    // Determine if the shell is interactive
+    int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+    
+    // Open /dev/tty for prompt output only if interactive
+    FILE *tty = interactive ? fopen("/dev/tty", "w") : nullptr;
+    int tty_fd = interactive ? open("/dev/tty", O_WRONLY) : -1;
+
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
     while (true) {
-        if (isatty(STDOUT_FILENO) && tty_fd != -1) {
-            dprintf(tty_fd, "$ ");  // Print prompt BEFORE command execution
+        // Print prompt only in interactive mode
+        if (interactive && tty_fd != -1) {
+            dprintf(tty_fd, "$ ");
         }
         std::string input;
         char c;
         while (true) {
             c = getchar();
             if (c == '\n') {
-                break; // Do not add newline to input.
+                break;
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                if (isatty(STDOUT_FILENO) && tty_fd != -1) {
+                if (interactive && tty_fd != -1) {
                     dprintf(tty_fd, "\r$ %s", input.c_str());
                 }
-            } else if (c == 127) { // Handle backspace.
+            } else if (c == 127) { // Handle backspace
                 if (!input.empty()) {
                     input.pop_back();
-                    if (isatty(STDOUT_FILENO) && tty_fd != -1) {
-                        dprintf(tty_fd, "\r$ %s ", input.c_str()); // Extra space to clear last character
+                    if (interactive && tty_fd != -1) {
+                        dprintf(tty_fd, "\r$ %s ", input.c_str());
                         dprintf(tty_fd, "\r$ %s", input.c_str());
                     }
                 }
             } else {
                 input.push_back(c);
-                if (isatty(STDOUT_FILENO) && tty_fd != -1) {
+                if (interactive && tty_fd != -1) {
                     dprintf(tty_fd, "%c", c);
                 }
             }
@@ -362,13 +369,17 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(),
-                                      O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
+                                      O_WRONLY | O_CREAT | O_APPEND , // Corrected to O_APPEND here directly
                                       0644);
                     if (err_fd == -1) {
                         std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
                         exit(EXIT_FAILURE);
                     }
-                    dup2(err_fd, STDERR_FILENO);
+                    if (dup2(err_fd, STDERR_FILENO) == -1) {
+                        std::cerr << "Failed to redirect stderr: " << strerror(errno) << std::endl;
+                        close(err_fd);
+                        exit(EXIT_FAILURE);
+                    }
                     close(err_fd);
                 } else {
                     // Redirect stderr to /dev/null if no error file is specified
@@ -385,6 +396,9 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
+                if (isatty(STDOUT_FILENO) && tty_fd != -1) {
+                    std::cout << std::endl;
+                }
             }
         } else if (command == "echo") {
             std::string echoArg;
@@ -459,14 +473,20 @@ int main() {
                     exit(EXIT_FAILURE);
                 }
             } else {
-                // Parent process
-                // Wait for the child process to finish before showing the next prompt
-                int status;
-                waitpid(pid, &status, 0);
-                if (isatty(STDOUT_FILENO) && tty_fd != -1) {
-                    dprintf(tty_fd, "$ "); // Removed newline here
+                // External command handling
+                pid_t pid = fork();
+                if (pid == 0) {
+                    // ... [child process code] ...
+                } else {
+                    int status;
+                    waitpid(pid, &status, 0);
+                    // Print new prompt only in interactive mode
+                    if (interactive && tty_fd != -1) {
+                        dprintf(tty_fd, "\n$ ");
+                    }
                 }
             }
+        
         }
     }
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
