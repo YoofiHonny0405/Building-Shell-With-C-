@@ -362,17 +362,13 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(),
-                                      O_WRONLY | O_CREAT | O_APPEND , // Corrected to O_APPEND here directly
+                                      O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
                                       0644);
                     if (err_fd == -1) {
                         std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
                         exit(EXIT_FAILURE);
                     }
-                    if (dup2(err_fd, STDERR_FILENO) == -1) {
-                        std::cerr << "Failed to redirect stderr: " << strerror(errno) << std::endl;
-                        close(err_fd);
-                        exit(EXIT_FAILURE);
-                    }
+                    dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 } else {
                     // Redirect stderr to /dev/null if no error file is specified
@@ -389,9 +385,6 @@ int main() {
             } else {
                 int status;
                 waitpid(pid, &status, 0);
-                if (isatty(STDOUT_FILENO) && tty_fd != -1) {
-                    std::cout << std::endl;
-                }
             }
         } else if (command == "echo") {
             std::string echoArg;
@@ -471,7 +464,7 @@ int main() {
                 int status;
                 waitpid(pid, &status, 0);
                 if (isatty(STDOUT_FILENO) && tty_fd != -1) {
-                    std::cout << std::endl;
+                    dprintf(tty_fd, "$ "); // Removed newline here
                 }
             }
         }
