@@ -229,9 +229,8 @@ void handleTypeCommand(const std::string& command, const std::unordered_set<std:
 
 std::string autocomplete(const std::string& input, const std::unordered_set<std::string>& builtins) {
     for (const auto& builtin : builtins) {
-        if (builtin.find(input) == 0) {
-            return builtin + " "; // Add a space after the completed command
-        }
+        if (builtin.find(input) == 0)
+            return builtin + " ";
     }
     return input;
 }
@@ -268,9 +267,8 @@ int main() {
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
 
-    // Determine if the shell is interactive
-    int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
-    FILE *tty = interactive ? fopen("/dev/tty", "w") : nullptr;
+    // Open /dev/tty for prompt output.
+    FILE *tty = fopen("/dev/tty", "w");
 
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
@@ -279,12 +277,12 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt only in interactive mode
-        if (interactive && tty) {
+        // Print prompt only to /dev/tty (and only if available).
+        if (tty)
+        {
             fprintf(tty, "$ ");
             fflush(tty);
         }
-        // Read user input
         std::string input;
         char c;
         while (true) {
@@ -293,37 +291,33 @@ int main() {
                 break; // Do not add newline to input.
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                if (isatty(STDOUT_FILENO) && tty) {
+                if (tty) {
                     fprintf(tty, "\r$ %s", input.c_str());
                     fflush(tty);
                 }
             } else if (c == 127) { // Handle backspace.
                 if (!input.empty()) {
                     input.pop_back();
-                    if (isatty(STDOUT_FILENO) && tty) {
+                    if (tty) {
                         fprintf(tty, "\r$ %s", input.c_str());
                         fflush(tty);
                     }
                 }
             } else {
                 input.push_back(c);
-                if (isatty(STDOUT_FILENO) && tty) {
+                if (tty) {
                     fputc(c, tty);
                     fflush(tty);
                 }
             }
         }
-    
-        // Execute the command
         if (feof(stdin))
             break;
         if (input == "exit 0")
             break;
-    
         Command cmd = parseCommand(input);
         if (cmd.args.empty())
             continue;
-    
         std::string command = unescapePath(cmd.args[0]);
         if (command == "cd") {
             handleCdCommand(cmd.args);
@@ -343,13 +337,6 @@ int main() {
         if (command == "ls") {
             pid_t pid = fork();
             if (pid == 0) {
-                // Redirect stderr to /dev/null to suppress error messages
-                int devNull = open("/dev/null", O_WRONLY);
-                if (devNull != -1) {
-                    dup2(devNull, STDERR_FILENO);
-                    close(devNull);
-                }
-                // Handle output and error redirection
                 if (!cmd.outputFile.empty()) {
                     fs::path outputPath(cmd.outputFile);
                     try {
@@ -361,7 +348,7 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int out_fd = open(cmd.outputFile.c_str(),
-                                      O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC),
+                                      O_WRONLY | O_CREAT | O_CLOEXEC | (cmd.appendOutput ? O_APPEND : O_TRUNC),
                                       0644);
                     if (out_fd == -1) {
                         std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
@@ -370,8 +357,6 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-        
-                // Handle error redirection
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
@@ -392,16 +377,21 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
-        
-                // Execute ls
+                else {
+                    int devNull = open("/dev/null", O_WRONLY);
+                    if (devNull != -1) {
+                        dup2(devNull, STDERR_FILENO);
+                        close(devNull);
+                    }
+                }
                 builtin_ls(cmd.args);
-        exit(0);
-    } else {
-        int status;
-        waitpid(pid, &status, 0);
-        continue; // Ensure no prompt is printed here
-    }
-}
+                exit(0);
+            } else {
+                int status;
+                waitpid(pid, &status, 0);
+                continue;
+            }
+        }
         if (command == "echo") {
             pid_t pid = fork();
             if (pid == 0) {
@@ -460,7 +450,8 @@ int main() {
                 waitpid(pid, &status, 0);
                 std::fflush(stderr);
             }
-        } else {
+        }
+        else {
             // External commands.
             pid_t pid = fork();
             if (pid == -1) {
@@ -505,7 +496,8 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
-                } else {
+                }
+                else {
                     int devNull = open("/dev/null", O_WRONLY);
                     if (devNull != -1) {
                         dup2(devNull, STDERR_FILENO);
@@ -533,7 +525,7 @@ int main() {
             }
         }
     }
-
+    
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     if (tty)
         fclose(tty);
