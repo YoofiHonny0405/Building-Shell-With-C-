@@ -270,9 +270,10 @@ int main() {
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
 
-    // Open /dev/tty for prompt output.
-    FILE *tty = fopen("/dev/tty", "w");
-
+    // Open /dev/tty for prompt output using open() so that the prompt is written
+    // to the controlling terminal and not captured by redirection.
+    int tty_fd = open("/dev/tty", O_WRONLY);
+    
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
@@ -280,10 +281,9 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     while (true) {
-        // Print prompt only to /dev/tty (so that redirection output is not affected)
-        if (isatty(STDOUT_FILENO) && tty) {
-            fprintf(tty, "$ ");
-            fflush(tty);
+        // Print prompt only if STDOUT is a terminal and tty_fd is valid.
+        if (isatty(STDOUT_FILENO) && tty_fd != -1) {
+            dprintf(tty_fd, "$ ");
         }
         std::string input;
         char c;
@@ -293,23 +293,20 @@ int main() {
                 break; // Do not add newline to input.
             } else if (c == '\t') {
                 input = autocomplete(input, builtins);
-                if (isatty(STDOUT_FILENO) && tty) {
-                    fprintf(tty, "\r$ %s", input.c_str());
-                    fflush(tty);
+                if (isatty(STDOUT_FILENO) && tty_fd != -1) {
+                    dprintf(tty_fd, "\r$ %s", input.c_str());
                 }
             } else if (c == 127) { // Handle backspace.
                 if (!input.empty()) {
                     input.pop_back();
-                    if (isatty(STDOUT_FILENO) && tty) {
-                        fprintf(tty, "\r$ %s", input.c_str());
-                        fflush(tty);
+                    if (isatty(STDOUT_FILENO) && tty_fd != -1) {
+                        dprintf(tty_fd, "\r$ %s", input.c_str());
                     }
                 }
             } else {
                 input.push_back(c);
-                if (isatty(STDOUT_FILENO) && tty) {
-                    fputc(c, tty);
-                    fflush(tty);
+                if (isatty(STDOUT_FILENO) && tty_fd != -1) {
+                    dprintf(tty_fd, "%c", c);
                 }
             }
         }
@@ -345,7 +342,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: " 
+                        std::cerr << "Failed to create directory for output file: "
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -365,7 +362,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: " 
+                        std::cerr << "Failed to create directory for error file: "
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -378,14 +375,9 @@ int main() {
                     }
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
-                } else {
-                    // For external commands, if no explicit error redirection is provided,
-                    // redirect stderr to /dev/null so that error messages do not mix with the prompt.
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if (devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
+                }
+                else {
+                    // Do not redirect stderr for external commands if no explicit redirection.
                 }
                 std::vector<char*> execArgs;
                 for (const auto& arg : cmd.args) {
@@ -416,7 +408,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: " 
+                        std::cerr << "Failed to create directory for output file: "
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -436,7 +428,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: " 
+                        std::cerr << "Failed to create directory for error file: "
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -478,7 +470,7 @@ int main() {
                         if (!fs::exists(outputPath.parent_path()))
                             fs::create_directories(outputPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for output file: " 
+                        std::cerr << "Failed to create directory for output file: "
                                   << outputPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -498,7 +490,7 @@ int main() {
                         if (!fs::exists(errorPath.parent_path()))
                             fs::create_directories(errorPath.parent_path());
                     } catch (const fs::filesystem_error &e) {
-                        std::cerr << "Failed to create directory for error file: " 
+                        std::cerr << "Failed to create directory for error file: "
                                   << errorPath.parent_path() << " - " << e.what() << std::endl;
                         exit(EXIT_FAILURE);
                     }
@@ -512,14 +504,7 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
-                else {
-                    // If no explicit error redirection, redirect stderr to /dev/null.
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if (devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
-                }
+                // Do not redirect stderr to /dev/null here.
                 std::vector<char*> execArgs;
                 for (const auto& arg : cmd.args) {
                     std::string unescaped = unescapePath(arg);
@@ -543,7 +528,7 @@ int main() {
     }
     
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    if (tty)
-        fclose(tty);
+    if (tty != nullptr)
+        close(tty_fd);
     return 0;
 }
