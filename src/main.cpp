@@ -279,16 +279,12 @@ int main() {
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    bool firstPrompt = true;
     while (true) {
-        // Print prompt only if STDOUT is a terminal and we are in interactive mode.
+        // Print prompt only if STDOUT is a terminal and in interactive mode.
         if (isatty(STDOUT_FILENO) && tty) {
-            if (!firstPrompt)
-                fprintf(tty, "\n");
             fprintf(tty, "$ ");
             fflush(tty);
         }
-        firstPrompt = false;
         std::string input;
         char c;
         while (true) {
@@ -383,13 +379,7 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
-                else {
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if (devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
-                }
+                // Execute builtin ls.
                 builtin_ls(cmd.args);
                 exit(0);
             } else {
@@ -456,7 +446,8 @@ int main() {
                 waitpid(pid, &status, 0);
                 std::fflush(stderr);
             }
-        } else {
+        }
+        else {
             // External commands.
             pid_t pid = fork();
             if (pid == -1) {
@@ -502,13 +493,7 @@ int main() {
                     dup2(err_fd, STDERR_FILENO);
                     close(err_fd);
                 }
-                else {
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if (devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
-                }
+                // Do not redirect stderr to /dev/null here—if no error redirection is specified, let errors print.
                 std::vector<char*> execArgs;
                 for (const auto& arg : cmd.args) {
                     std::string unescaped = unescapePath(arg);
@@ -530,7 +515,7 @@ int main() {
             }
         }
     }
-
+    
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     if (tty)
         fclose(tty);
