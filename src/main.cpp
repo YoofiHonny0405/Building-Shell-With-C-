@@ -567,9 +567,13 @@ int main() {
                 std::fflush(stderr);
             }
         }
-        if (isatty(STDOUT_FILENO) && tty_fd != -1) {
-            dprintf(tty_fd, "\n");  // Ensure previous command output is finished
-        }
+        int status;
+waitpid(pid, &status, 0);  // Wait for command to finish
+
+// Print new prompt only AFTER command completes
+if (isatty(STDOUT_FILENO) && tty_fd != -1) {
+    dprintf(tty_fd, "\n$ ");
+}
     }
     
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
