@@ -357,10 +357,8 @@ int main() {
                     close(out_fd);
                 }
                 
-                // If no explicit error redirection is provided, redirect stderr to the same file as stdout.
-                if (!cmd.outputFile.empty() && cmd.errorFile.empty()) {
-                    dup2(STDOUT_FILENO, STDERR_FILENO);
-                } else if (!cmd.errorFile.empty()) {
+                // Only redirect stderr if an explicit error redirection is provided.
+                if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
