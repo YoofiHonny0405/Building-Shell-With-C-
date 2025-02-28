@@ -273,8 +273,21 @@ int main() {
 
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
-    std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
-
+    std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>> builtins = {
+        {"cd", handleCdCommand},
+        {"pwd", [](const std::vector<std::string>&) { handlePwdCommand(); }},
+        {"type", [](const std::vector<std::string>& args) { 
+            if (args.size() > 1) handleTypeCommand(args[1], builtins); 
+            else std::cerr << "type: missing operand" << std::endl;
+        }},
+        {"exit", [](const std::vector<std::string>&) { exit(0); }},
+        {"ls", builtin_ls},
+        {"echo", [](const std::vector<std::string>& args) { 
+            std::string echoArg;
+            for (size_t i = 1; i < args.size(); ++i) echoArg += args[i] + " ";
+            std::cout << processEchoLine(trim(echoArg)) << std::endl;
+        }}
+    };
     // Determine if the shell is interactive
     int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
 
