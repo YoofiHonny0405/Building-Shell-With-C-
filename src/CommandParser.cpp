@@ -6,8 +6,8 @@
 
 
 
-CommandParser::ParseResult CommandParser::parse(const std::string& input) {
-  ParseResult result;
+CommandParser::Result CommandParser::parse(const std::string& input) {
+  Result result;
 
   // First parse to determine command type
   auto initialTokens = tokenGeneral(input);
