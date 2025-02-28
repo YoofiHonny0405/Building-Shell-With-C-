@@ -404,10 +404,27 @@ int main() {
         std::string command = unescapePath(cmd.args[0]);
         
         auto it = builtin_map.find(command);
-        if (it != builtin_map.end()) {
-            it->second(cmd.args);
-            continue;
-        }
+        auto parseResult = parseCommand(input);
+        if (parseResult.args.empty()) continue;
+
+        std::string command = parseResult.args[0];
+        
+        if (isBuiltin(command)) {
+            // Handle built-in command with redirections
+            RedirectionHandler rh;
+            rh.apply(parseResult.redirections);
+            executeBuiltin(command, parseResult.args);
+            rh.restore();
+        } else {
+            // Fork and execute external command
+            pid_t pid = fork();
+            if (pid == 0) {
+                RedirectionHandler rh;
+                rh.apply(parseResult.redirections);
+                execExternal(command, parseResult.args);
+                rh.restore();  // Should never reach here
+                exit(EXIT_FAILURE);
+            }
         
         // For external commands:
         pid_t pid = fork();
