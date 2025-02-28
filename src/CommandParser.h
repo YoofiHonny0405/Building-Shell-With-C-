@@ -8,7 +8,7 @@ public:
 
     struct Result{
         std::vector<std::string> args;
-        std::vector<Redirection> redirection;
+        std::vector<Redirection> redirections;
     };
     Result parse(const std:: string& input);
 
