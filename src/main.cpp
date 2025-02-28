@@ -20,6 +20,7 @@
 #include <ios>
 #include <ostream>
 #include <cstddef>
+#include <unordered_map>
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
