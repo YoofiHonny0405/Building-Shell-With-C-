@@ -208,10 +208,6 @@ void builtin_ls(const std::vector<std::string>& args) {
     }
     for (size_t i = 1; i < args.size(); ++i) {
         std::string path = args[i];
-        // If the argument starts with '-', treat it as an option and skip it.
-        if (!path.empty() && path[0] == '-') {
-            continue;
-        }
         if (!fs::exists(path)) {
             std::cerr << "ls: " << path << ": No such file or directory" << std::endl;
         }
@@ -226,7 +222,6 @@ void builtin_ls(const std::vector<std::string>& args) {
             std::cout << fs::path(path).filename().string() << std::endl;
         }
     }
-    
 }
 
 struct Command {
@@ -374,7 +369,7 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(),
-                                      O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
+                                      O_WRONLY | O_CREAT | O_APPEND,
                                       0644);
                     if (err_fd == -1) {
                         std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
@@ -387,15 +382,6 @@ int main() {
                     }
                     close(err_fd);
                 }
-                 // Redirect stderr to /dev/null only if no error file is specified
-                if (cmd.errorFile.empty()) { // Moved condition check here
-                    int devNull = open("/dev/null", O_WRONLY);
-                    if (devNull != -1) {
-                        dup2(devNull, STDERR_FILENO);
-                        close(devNull);
-                    }
-                }
-
 
                 // Execute the built-in ls command
                 builtin_ls(cmd.args);
