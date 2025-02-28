@@ -369,7 +369,7 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(),
-                                      O_WRONLY | O_CREAT | O_APPEND,
+                                      O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
                                       0644);
                     if (err_fd == -1) {
                         std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
@@ -382,6 +382,15 @@ int main() {
                     }
                     close(err_fd);
                 }
+                 // Redirect stderr to /dev/null only if no error file is specified
+                else (cmd.errorFile.empty()) { // Moved condition check here
+                    int devNull = open("/dev/null", O_WRONLY);
+                    if (devNull != -1) {
+                        dup2(devNull, STDERR_FILENO);
+                        close(devNull);
+                    }
+                }
+
 
                 // Execute the built-in ls command
                 builtin_ls(cmd.args);
