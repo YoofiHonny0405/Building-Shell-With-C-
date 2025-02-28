@@ -21,6 +21,7 @@
 #include <ostream>
 #include <cstddef>
 #include <unordered_map>
+#include "Shell.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -269,10 +270,12 @@ Command parseCommand(const std::string& input) {
 }
 
 int main() {
+
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
-
+    Shell shell;
+    shell.run();
     // Determine if the shell is interactive
     int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
 
