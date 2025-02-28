@@ -8,7 +8,7 @@
 #include <climits>
 #include <unordered_map>
 #include <unordered_set>
-#include <functional>    // <--- required for std::function
+#include <functional>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <cerrno>
@@ -29,7 +29,7 @@
 
 namespace fs = std::filesystem;
 
-// ------------------- Utility Functions -------------------
+// ---------- Utility Functions -------------
 std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -46,17 +46,10 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
             token.push_back(c);
             continue;
         }
-        if (c == '\'' && !inDouble) {
-            inSingle = !inSingle;
-            token.push_back(c);
-        } else if (c == '"' && !inSingle) {
-            inDouble = !inDouble;
-            token.push_back(c);
-        } else if (c == delimiter && !inSingle && !inDouble) {
-            if (!token.empty()) {
-                tokens.push_back(token);
-                token.clear();
-            }
+        if (c == '\'' && !inDouble) { inSingle = !inSingle; token.push_back(c); }
+        else if (c == '"' && !inSingle) { inDouble = !inDouble; token.push_back(c); }
+        else if (c == delimiter && !inSingle && !inDouble) {
+            if (!token.empty()) { tokens.push_back(token); token.clear(); }
         } else {
             token.push_back(c);
         }
@@ -79,13 +72,11 @@ std::string unescapePath(const std::string &path) {
 
 std::string findExecutable(const std::string &command) {
     const char* pathEnv = std::getenv("PATH");
-    if (!pathEnv)
-        return "";
+    if (!pathEnv) return "";
     std::istringstream iss(pathEnv);
     std::string path;
     while (std::getline(iss, path, ':')) {
-        if (path.empty())
-            continue;
+        if (path.empty()) continue;
         std::string fullPath = path + "/" + command;
         if (access(fullPath.c_str(), F_OK | X_OK) == 0)
             return fullPath;
@@ -95,8 +86,7 @@ std::string findExecutable(const std::string &command) {
 
 std::string trim(const std::string &s) {
     size_t start = s.find_first_not_of(" \t\r\n");
-    if(start == std::string::npos)
-        return "";
+    if(start == std::string::npos) return "";
     size_t end = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
 }
@@ -106,31 +96,13 @@ std::string processEchoLine(const std::string &line) {
     bool inDouble = false, inSingle = false, escaped = false;
     bool lastWasSpace = false;
     for (char c : line) {
-        if (escaped) {
-            out.push_back(c);
-            escaped = false;
-            continue;
-        }
-        if (c == '\\' && !inSingle) {
-            escaped = true;
-            continue;
-        }
-        if (c == '"' && !inSingle) {
-            inDouble = !inDouble;
-            continue;
-        }
-        if (c == '\'' && !inDouble) {
-            inSingle = !inSingle;
-            continue;
-        }
+        if (escaped) { out.push_back(c); escaped = false; continue; }
+        if (c == '\\' && !inSingle) { escaped = true; continue; }
+        if (c == '"' && !inSingle) { inDouble = !inDouble; continue; }
+        if (c == '\'' && !inDouble) { inSingle = !inSingle; continue; }
         if (c == ' ') {
-            if (inSingle || inDouble) {
-                out.push_back(c);
-                lastWasSpace = false;
-            } else if (!lastWasSpace) {
-                out.push_back(c);
-                lastWasSpace = true;
-            }
+            if (inSingle || inDouble) { out.push_back(c); lastWasSpace = false; }
+            else if (!lastWasSpace) { out.push_back(c); lastWasSpace = true; }
             continue;
         }
         out.push_back(c);
@@ -141,41 +113,97 @@ std::string processEchoLine(const std::string &line) {
     return out;
 }
 
-// ------------------- Command Structure -------------------
-struct Command {
-    std::vector<std::string> args;
-    std::string outputFile;
-    std::string errorFile;
-    bool appendOutput;
-    bool appendError;
+// ---------- Redirection Handling ------------
+enum RedirMode { TRUNCATE, APPEND };
+
+struct Redirection {
+    int fd;                // e.g., STDOUT_FILENO or STDERR_FILENO
+    std::string filename;
+    RedirMode mode;
 };
 
-Command parseCommand(const std::string& input) {
-    Command cmd;
-    cmd.appendOutput = false;
-    cmd.appendError = false;
+class RedirectionHandler {
+public:
+    std::unordered_map<int,int> original_fds;
+    
+    void apply(const std::vector<Redirection>& redirections) {
+        for (const auto& redir : redirections) {
+            int fd = redir.fd;
+            if (original_fds.find(fd) == original_fds.end()) {
+                int saved = dup(fd);
+                if (saved == -1) {
+                    perror("dup");
+                    continue;
+                }
+                original_fds[fd] = saved;
+            }
+            int flags = O_WRONLY | O_CREAT;
+            flags |= (redir.mode == TRUNCATE) ? O_TRUNC : O_APPEND;
+            int file_fd = open(redir.filename.c_str(), flags, 0666);
+            if (file_fd == -1) {
+                perror("open");
+                continue;
+            }
+            if (dup2(file_fd, fd) == -1) {
+                perror("dup2");
+            }
+            close(file_fd);
+        }
+    }
+    
+    void restore() {
+        for (const auto &pair : original_fds) {
+            if (dup2(pair.second, pair.first) == -1) {
+                perror("dup2 restore");
+            }
+            close(pair.second);
+        }
+        original_fds.clear();
+    }
+};
+
+// ---------- Command Structure ------------
+struct CommandStruct {
+    std::vector<std::string> args;
+    std::vector<Redirection> redirections;
+};
+
+CommandStruct parseCommandStruct(const std::string& input) {
+    CommandStruct cmd;
     std::vector<std::string> tokens = split(input, ' ');
     for (size_t i = 0; i < tokens.size(); i++) {
         std::string token = trim(unescapePath(tokens[i]));
         if (token == ">" || token == "1>") {
             if (i + 1 < tokens.size()) {
-                cmd.outputFile = trim(unescapePath(tokens[++i]));
-                cmd.appendOutput = false;
+                Redirection redir;
+                redir.fd = STDOUT_FILENO;
+                redir.filename = trim(unescapePath(tokens[++i]));
+                redir.mode = TRUNCATE;
+                cmd.redirections.push_back(redir);
             }
         } else if (token == ">>" || token == "1>>") {
             if (i + 1 < tokens.size()) {
-                cmd.outputFile = trim(unescapePath(tokens[++i]));
-                cmd.appendOutput = true;
+                Redirection redir;
+                redir.fd = STDOUT_FILENO;
+                redir.filename = trim(unescapePath(tokens[++i]));
+                redir.mode = APPEND;
+                cmd.redirections.push_back(redir);
             }
         } else if (token == "2>") {
             if (i + 1 < tokens.size()) {
-                cmd.errorFile = trim(unescapePath(tokens[++i]));
-                cmd.appendError = false;
+                Redirection redir;
+                redir.fd = STDERR_FILENO;
+                redir.filename = trim(unescapePath(tokens[++i]));
+                redir.mode = TRUNCATE;
+                cmd.redirections.push_back(redir);
             }
         } else if (token == "2>>") {
             if (i + 1 < tokens.size()) {
-                cmd.errorFile = trim(unescapePath(tokens[++i]));
-                cmd.appendError = true;
+                Redirection redir;
+                redir.fd = STDERR_FILENO;
+                redir.filename = trim(unescapePath(tokens[++i]));
+                redir.mode = APPEND;
+                cmd.redirections.push_back(redir);
             }
         } else {
             cmd.args.push_back(tokens[i]);
@@ -184,86 +212,19 @@ Command parseCommand(const std::string& input) {
     return cmd;
 }
 
-// ------------------- Redirection Handling -------------------
-// Here we use an unordered_map to save original file descriptors.
-void applyRedirections(const Command &cmd, std::unordered_map<int,int> &orig_fds) {
-    if (!cmd.outputFile.empty()) {
-        int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
-        if (out_fd == -1) {
-            std::cerr << "Failed to open output file: " << strerror(errno) << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        if (orig_fds.find(STDOUT_FILENO) == orig_fds.end()) {
-            int saved = dup(STDOUT_FILENO);
-            if (saved == -1) {
-                std::cerr << "dup failed for stdout: " << strerror(errno) << std::endl;
-                exit(EXIT_FAILURE);
-            }
-            orig_fds[STDOUT_FILENO] = saved;
-        }
-        if (dup2(out_fd, STDOUT_FILENO) == -1) {
-            std::cerr << "dup2 failed for stdout: " << strerror(errno) << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        close(out_fd);
-    }
-    if (!cmd.errorFile.empty()) {
-        int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
-        if (err_fd == -1) {
-            std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        if (orig_fds.find(STDERR_FILENO) == orig_fds.end()) {
-            int saved = dup(STDERR_FILENO);
-            if (saved == -1) {
-                std::cerr << "dup failed for stderr: " << strerror(errno) << std::endl;
-                exit(EXIT_FAILURE);
-            }
-            orig_fds[STDERR_FILENO] = saved;
-        }
-        if (dup2(err_fd, STDERR_FILENO) == -1) {
-            std::cerr << "dup2 failed for stderr: " << strerror(errno) << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        close(err_fd);
-    }
-}
-
-void restoreRedirections(const std::unordered_map<int,int>& orig_fds) {
-    for (const auto &pair : orig_fds) {
-        if (dup2(pair.second, pair.first) == -1) {
-            std::cerr << "dup2 restore failed: " << strerror(errno) << std::endl;
-        }
-        close(pair.second);
-    }
-}
-
-// ------------------- Builtin Commands -------------------
+// ---------- Builtin Commands ------------
 void handleCd(const std::vector<std::string>& args) {
-    // You already have handleCdCommand defined; just call it.
-    // (Make sure that function is declared above this point.)
-    // Here we assume handleCdCommand(args) exists.
-    // If not, you can simply inline its code.
-    // For example:
     std::string targetDir;
     if (args.size() < 2) {
         const char* home = std::getenv("HOME");
-        if (home)
-            targetDir = home;
-        else {
-            std::cerr << "cd: HOME not set" << std::endl;
-            return;
-        }
+        if (home) targetDir = home;
+        else { std::cerr << "cd: HOME not set" << std::endl; return; }
     } else {
         targetDir = args[1];
         if (!targetDir.empty() && targetDir[0] == '~') {
             const char* home = std::getenv("HOME");
-            if (home)
-                targetDir = home + targetDir.substr(1);
-            else {
-                std::cerr << "cd: HOME not set" << std::endl;
-                return;
-            }
+            if (home) targetDir = home + targetDir.substr(1);
+            else { std::cerr << "cd: HOME not set" << std::endl; return; }
         }
     }
     if (chdir(targetDir.c_str()) != 0)
@@ -281,7 +242,6 @@ void handlePwd(const std::vector<std::string>&) {
 void handleType(const std::vector<std::string>& args,
                 const std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>>& builtin_map) {
     if (args.size() > 1)
-        // Call the built-in's function if it exists.
         std::cout << args[1] << " is a shell builtin" << std::endl;
     else
         std::cerr << "type: missing operand" << std::endl;
@@ -292,7 +252,6 @@ void handleExit(const std::vector<std::string>&) {
 }
 
 void handleLs(const std::vector<std::string>& args) {
-    // A simple implementation of ls.
     if (args.size() == 1) {
         try {
             for (const auto &entry : fs::directory_iterator(fs::current_path()))
@@ -327,17 +286,17 @@ void handleEcho(const std::vector<std::string>& args) {
     std::cout << processEchoLine(echoArg) << std::endl;
 }
 
-// ------------------- Autocompletion -------------------
+// ---------- Autocompletion ------------
 std::string autocomplete(const std::string& input,
     const std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>>& builtin_map) {
     for (const auto& pair : builtin_map) {
         if (pair.first.rfind(input, 0) == 0)
-            return pair.first + " "; // Add a trailing space.
+            return pair.first + " "; // Add trailing space.
     }
     return input;
 }
 
-// ------------------- Main -------------------
+// ---------- Main -------------------
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
@@ -352,7 +311,7 @@ int main() {
         {"echo", handleEcho}
     };
     
-    // Determine if the shell is interactive.
+    // Determine if shell is interactive.
     int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
     FILE *tty = interactive ? fopen("/dev/tty", "w") : nullptr;
     int tty_fd = interactive ? open("/dev/tty", O_WRONLY) : -1;
@@ -364,7 +323,6 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
     
     while (true) {
-        // Print prompt only if interactive.
         if (interactive && tty_fd != -1) {
             dprintf(tty_fd, "$ ");
         }
@@ -398,42 +356,26 @@ int main() {
             break;
         if (input == "exit 0")
             break;
-        Command cmd = parseCommand(input);
+        // Use our new parseCommandStruct to handle redirections.
+        CommandStruct cmd = parseCommandStruct(input);
         if (cmd.args.empty())
             continue;
         std::string command = unescapePath(cmd.args[0]);
         
         auto it = builtin_map.find(command);
-        auto parseResult = parseCommand(input);
-        if (parseResult.args.empty()) continue;
-
-        std::string command = parseResult.args[0];
-        
-        if (isBuiltin(command)) {
-            // Handle built-in command with redirections
-            RedirectionHandler rh;
-            rh.apply(parseResult.redirections);
-            executeBuiltin(command, parseResult.args);
-            rh.restore();
-        } else {
-            // Fork and execute external command
-            pid_t pid = fork();
-            if (pid == 0) {
-                RedirectionHandler rh;
-                rh.apply(parseResult.redirections);
-                execExternal(command, parseResult.args);
-                rh.restore();  // Should never reach here
-                exit(EXIT_FAILURE);
-            }
+        if (it != builtin_map.end()) {
+            it->second(cmd.args);
+            continue;
+        }
         
         // For external commands:
         pid_t pid = fork();
         if (pid == -1) {
             std::cerr << "Failed to fork process" << std::endl;
         } else if (pid == 0) {
-            // In child process, apply redirections using an unordered_map.
-            std::unordered_map<int,int> orig_fds;
-            applyRedirections(cmd, orig_fds);
+            // In child process, apply redirections using RedirectionHandler.
+            RedirectionHandler rh;
+            rh.apply(cmd.redirections);
             std::vector<char*> execArgs;
             for (const auto& arg : cmd.args) {
                 std::string unescaped = unescapePath(arg);
@@ -447,6 +389,7 @@ int main() {
                     if (arg) free(arg);
                 exit(EXIT_FAILURE);
             }
+            // Optionally, you could call rh.restore() here, but it won't matter in the child process.
         } else {
             int status;
             waitpid(pid, &status, 0);
