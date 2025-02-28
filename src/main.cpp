@@ -29,7 +29,8 @@
 
 namespace fs = std::filesystem;
 
-// ---------- Utility Functions -------------
+// ---------- Utility Functions ----------
+
 std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -46,10 +47,17 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
             token.push_back(c);
             continue;
         }
-        if (c == '\'' && !inDouble) { inSingle = !inSingle; token.push_back(c); }
-        else if (c == '"' && !inSingle) { inDouble = !inDouble; token.push_back(c); }
-        else if (c == delimiter && !inSingle && !inDouble) {
-            if (!token.empty()) { tokens.push_back(token); token.clear(); }
+        if (c == '\'' && !inDouble) { 
+            inSingle = !inSingle; 
+            token.push_back(c);
+        } else if (c == '"' && !inSingle) { 
+            inDouble = !inDouble; 
+            token.push_back(c);
+        } else if (c == delimiter && !inSingle && !inDouble) {
+            if (!token.empty()) {
+                tokens.push_back(token);
+                token.clear();
+            }
         } else {
             token.push_back(c);
         }
@@ -70,23 +78,10 @@ std::string unescapePath(const std::string &path) {
     return result;
 }
 
-std::string findExecutable(const std::string &command) {
-    const char* pathEnv = std::getenv("PATH");
-    if (!pathEnv) return "";
-    std::istringstream iss(pathEnv);
-    std::string path;
-    while (std::getline(iss, path, ':')) {
-        if (path.empty()) continue;
-        std::string fullPath = path + "/" + command;
-        if (access(fullPath.c_str(), F_OK | X_OK) == 0)
-            return fullPath;
-    }
-    return "";
-}
-
 std::string trim(const std::string &s) {
     size_t start = s.find_first_not_of(" \t\r\n");
-    if(start == std::string::npos) return "";
+    if (start == std::string::npos)
+        return "";
     size_t end = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
 }
@@ -96,7 +91,11 @@ std::string processEchoLine(const std::string &line) {
     bool inDouble = false, inSingle = false, escaped = false;
     bool lastWasSpace = false;
     for (char c : line) {
-        if (escaped) { out.push_back(c); escaped = false; continue; }
+        if (escaped) {
+            out.push_back(c);
+            escaped = false;
+            continue;
+        }
         if (c == '\\' && !inSingle) { escaped = true; continue; }
         if (c == '"' && !inSingle) { inDouble = !inDouble; continue; }
         if (c == '\'' && !inDouble) { inSingle = !inSingle; continue; }
@@ -113,21 +112,25 @@ std::string processEchoLine(const std::string &line) {
     return out;
 }
 
-// ---------- Redirection Handling ------------
+// ---------- Redirection Handling ----------
+
+// Redirection mode.
 enum RedirMode { TRUNCATE, APPEND };
 
+// A redirection request.
 struct Redirection {
-    int fd;                // e.g., STDOUT_FILENO or STDERR_FILENO
+    int fd;                // Typically STDOUT_FILENO or STDERR_FILENO.
     std::string filename;
     RedirMode mode;
 };
 
+// A handler that saves original file descriptors in an unordered_map.
 class RedirectionHandler {
 public:
     std::unordered_map<int,int> original_fds;
     
-    void apply(const std::vector<Redirection>& redirections) {
-        for (const auto& redir : redirections) {
+    void apply(const std::vector<Redirection>& redirs) {
+        for (const auto& redir : redirs) {
             int fd = redir.fd;
             if (original_fds.find(fd) == original_fds.end()) {
                 int saved = dup(fd);
@@ -162,48 +165,52 @@ public:
     }
 };
 
-// ---------- Command Structure ------------
+// ---------- Command Structure ----------
+
+// Instead of storing redirection info in separate strings,
+// we now store a vector of Redirection.
 struct CommandStruct {
     std::vector<std::string> args;
     std::vector<Redirection> redirections;
 };
 
+// Parse the command string and separate arguments from redirection tokens.
 CommandStruct parseCommandStruct(const std::string& input) {
     CommandStruct cmd;
     std::vector<std::string> tokens = split(input, ' ');
     for (size_t i = 0; i < tokens.size(); i++) {
         std::string token = trim(unescapePath(tokens[i]));
         if (token == ">" || token == "1>") {
-            if (i + 1 < tokens.size()) {
-                Redirection redir;
-                redir.fd = STDOUT_FILENO;
-                redir.filename = trim(unescapePath(tokens[++i]));
-                redir.mode = TRUNCATE;
-                cmd.redirections.push_back(redir);
+            if (i+1 < tokens.size()) {
+                Redirection r;
+                r.fd = STDOUT_FILENO;
+                r.filename = trim(unescapePath(tokens[++i]));
+                r.mode = TRUNCATE;
+                cmd.redirections.push_back(r);
             }
         } else if (token == ">>" || token == "1>>") {
-            if (i + 1 < tokens.size()) {
-                Redirection redir;
-                redir.fd = STDOUT_FILENO;
-                redir.filename = trim(unescapePath(tokens[++i]));
-                redir.mode = APPEND;
-                cmd.redirections.push_back(redir);
+            if (i+1 < tokens.size()) {
+                Redirection r;
+                r.fd = STDOUT_FILENO;
+                r.filename = trim(unescapePath(tokens[++i]));
+                r.mode = APPEND;
+                cmd.redirections.push_back(r);
             }
         } else if (token == "2>") {
-            if (i + 1 < tokens.size()) {
-                Redirection redir;
-                redir.fd = STDERR_FILENO;
-                redir.filename = trim(unescapePath(tokens[++i]));
-                redir.mode = TRUNCATE;
-                cmd.redirections.push_back(redir);
+            if (i+1 < tokens.size()) {
+                Redirection r;
+                r.fd = STDERR_FILENO;
+                r.filename = trim(unescapePath(tokens[++i]));
+                r.mode = TRUNCATE;
+                cmd.redirections.push_back(r);
             }
         } else if (token == "2>>") {
-            if (i + 1 < tokens.size()) {
-                Redirection redir;
-                redir.fd = STDERR_FILENO;
-                redir.filename = trim(unescapePath(tokens[++i]));
-                redir.mode = APPEND;
-                cmd.redirections.push_back(redir);
+            if (i+1 < tokens.size()) {
+                Redirection r;
+                r.fd = STDERR_FILENO;
+                r.filename = trim(unescapePath(tokens[++i]));
+                r.mode = APPEND;
+                cmd.redirections.push_back(r);
             }
         } else {
             cmd.args.push_back(tokens[i]);
@@ -212,19 +219,28 @@ CommandStruct parseCommandStruct(const std::string& input) {
     return cmd;
 }
 
-// ---------- Builtin Commands ------------
+// ---------- Builtin Commands ----------
+
 void handleCd(const std::vector<std::string>& args) {
     std::string targetDir;
     if (args.size() < 2) {
         const char* home = std::getenv("HOME");
-        if (home) targetDir = home;
-        else { std::cerr << "cd: HOME not set" << std::endl; return; }
+        if (home)
+            targetDir = home;
+        else {
+            std::cerr << "cd: HOME not set" << std::endl;
+            return;
+        }
     } else {
         targetDir = args[1];
-        if (!targetDir.empty() && targetDir[0] == '~') {
+        if (!targetDir.empty() && targetDir[0]=='~') {
             const char* home = std::getenv("HOME");
-            if (home) targetDir = home + targetDir.substr(1);
-            else { std::cerr << "cd: HOME not set" << std::endl; return; }
+            if (home)
+                targetDir = home + targetDir.substr(1);
+            else {
+                std::cerr << "cd: HOME not set" << std::endl;
+                return;
+            }
         }
     }
     if (chdir(targetDir.c_str()) != 0)
@@ -286,17 +302,17 @@ void handleEcho(const std::vector<std::string>& args) {
     std::cout << processEchoLine(echoArg) << std::endl;
 }
 
-// ---------- Autocompletion ------------
+// ---------- Autocompletion ----------
 std::string autocomplete(const std::string& input,
     const std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>>& builtin_map) {
     for (const auto& pair : builtin_map) {
         if (pair.first.rfind(input, 0) == 0)
-            return pair.first + " "; // Add trailing space.
+            return pair.first + " ";
     }
     return input;
 }
 
-// ---------- Main -------------------
+// ---------- Main ----------
 int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
@@ -356,6 +372,7 @@ int main() {
             break;
         if (input == "exit 0")
             break;
+        
         // Use our new parseCommandStruct to handle redirections.
         CommandStruct cmd = parseCommandStruct(input);
         if (cmd.args.empty())
@@ -389,7 +406,6 @@ int main() {
                     if (arg) free(arg);
                 exit(EXIT_FAILURE);
             }
-            // Optionally, you could call rh.restore() here, but it won't matter in the child process.
         } else {
             int status;
             waitpid(pid, &status, 0);
