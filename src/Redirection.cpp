@@ -2,7 +2,7 @@
 #include <iostream>
 
 struct Redirection{
-  int fl;
+  int fd;
   enum Mode {TRUNCATE, APPEND} mode;
   std::string filename;
 };
