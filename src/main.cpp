@@ -270,10 +270,10 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     std::unordered_set<std::string> builtins = {"echo", "exit", "type", "pwd", "cd", "ls"};
-    
+
     // Determine if the shell is interactive
     int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
-    
+
     // Open /dev/tty for prompt output only if interactive
     FILE *tty = interactive ? fopen("/dev/tty", "w") : nullptr;
     int tty_fd = interactive ? open("/dev/tty", O_WRONLY) : -1;
@@ -356,8 +356,8 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-                
-                // Only redirect stderr if an explicit error redirection is provided.
+
+                // Handle error redirection
                 if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
@@ -369,7 +369,7 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(),
-                                      O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
+                                      O_WRONLY | O_CREAT | O_APPEND , // Corrected to O_APPEND here directly
                                       0644);
                     if (err_fd == -1) {
                         std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
@@ -381,14 +381,16 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     close(err_fd);
-                } else {
-                    // Redirect stderr to /dev/null if no error file is specified
+                }
+                 // Redirect stderr to /dev/null only if no error file is specified
+                if (cmd.errorFile.empty()) { // Moved condition check here
                     int devNull = open("/dev/null", O_WRONLY);
                     if (devNull != -1) {
                         dup2(devNull, STDERR_FILENO);
                         close(devNull);
                     }
                 }
+
 
                 // Execute the built-in ls command
                 builtin_ls(cmd.args);
@@ -487,7 +489,7 @@ int main() {
                     }
                 }
             }
-        
+
         }
     }
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
