@@ -356,9 +356,11 @@ int main() {
                     dup2(out_fd, STDOUT_FILENO);
                     close(out_fd);
                 }
-
-                // Handle error redirection
-                if (!cmd.errorFile.empty()) {
+                
+                // If no explicit error redirection is provided, redirect stderr to the same file as stdout.
+                if (!cmd.outputFile.empty() && cmd.errorFile.empty()) {
+                    dup2(STDOUT_FILENO, STDERR_FILENO);
+                } else if (!cmd.errorFile.empty()) {
                     fs::path errorPath(cmd.errorFile);
                     try {
                         if (!fs::exists(errorPath.parent_path()))
@@ -369,7 +371,7 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(),
-                                      O_WRONLY | O_CREAT | O_APPEND , // Corrected to O_APPEND here directly
+                                      O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
                                       0644);
                     if (err_fd == -1) {
                         std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
