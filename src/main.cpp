@@ -386,8 +386,8 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     close(err_fd);
-                }
-                 // Redirect stderr to /dev/null only if no error file is specified
+
+                    // Redirect stderr to /dev/null only if no error file is specified
                 else (cmd.errorFile.empty()) { // Moved condition check here
                     int devNull = open("/dev/null", O_WRONLY);
                     if (devNull != -1) {
@@ -396,6 +396,8 @@ int main() {
                     }
                 }
 
+                }
+                 
 
                 // Execute the built-in ls command
                 builtin_ls(cmd.args);
