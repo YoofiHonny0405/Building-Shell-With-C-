@@ -21,6 +21,7 @@
 #include <ostream>
 #include <cstddef>
 #include <unordered_map>
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -227,44 +228,42 @@ void builtin_ls(const std::vector<std::string>& args) {
 
 struct Command {
     std::vector<std::string> args;
-    std::string outputFile;
-    std::string errorFile;
-    bool appendOutput;
-    bool appendError;
+    std::vector<Redirection> redirection;
+    std::vector<std::string> tokenEcho(const std:: string& input);
+    std::vector<std::string> tokenGeneral(const std::string& input);
+    bool isRedirectOperator(const std::string& token) const;
+    bool parseRedirectOperator(const std::string& token, Redirection& redir)const;
 };
 
 Command parseCommand(const std::string& input) {
-    Command cmd;
-    cmd.appendOutput = false;
-    cmd.appendError = false;
-    std::vector<std::string> tokens = split(input, ' ');
-    for (size_t i = 0; i < tokens.size(); i++) {
-        std::string token = trim(unescapePath(tokens[i]));
-        if (token == ">" || token == "1>") {
-            if (i + 1 < tokens.size()) {
-                cmd.outputFile = trim(unescapePath(tokens[++i]));
-                cmd.appendOutput = false;
+    Command result;
+
+    // First parse to determine command type
+    auto initialTokens = tokenizeGeneral(input);
+    if (initialTokens.empty()) return result;
+
+    // Determine which tokenization to use
+    const bool isEchoCommand = (initialTokens[0] == "echo");
+
+    // Get final tokens using appropriate strategy
+    std::vector<std::string> tokens = isEchoCommand ? tokenizeEcho(input) : tokenizeGeneral(input);
+
+    // Process tokens for commands and redirections
+    for (size_t i = 0; i < tokens.size();) {
+        if (isRedirectOperator(tokens[i])) {
+            Redirection redir;
+            if (parseRedirectOperator(tokens[i], redir) && (i + 1 < tokens.size())) {
+                redir.filename = tokens[i + 1];
+                result.redirections.push_back(redir);
+                i += 2;
+                continue;
             }
-        } else if (token == ">>" || token == "1>>") {
-            if (i + 1 < tokens.size()) {
-                cmd.outputFile = trim(unescapePath(tokens[++i]));
-                cmd.appendOutput = true;
-            }
-        } else if (token == "2>") {
-            if (i + 1 < tokens.size()) {
-                cmd.errorFile = trim(unescapePath(tokens[++i]));
-                cmd.appendError = false;
-            }
-        } else if (token == "2>>") {
-            if (i + 1 < tokens.size()) {
-                cmd.errorFile = trim(unescapePath(tokens[++i]));
-                cmd.appendError = true;
-            }
-        } else {
-            cmd.args.push_back(tokens[i]);
         }
+        result.args.push_back(tokens[i]);
+        i++;
     }
-    return cmd;
+
+    return result;
 }
 
 int main() {
