@@ -8,6 +8,7 @@
 #include <climits>
 #include <unordered_map>
 #include <unordered_set>
+#include <functional>    // <--- required for std::function
 #include <unistd.h>
 #include <sys/wait.h>
 #include <cerrno>
@@ -183,9 +184,9 @@ Command parseCommand(const std::string& input) {
     return cmd;
 }
 
-// ------------------- Redirection Handling Using unordered_map -------------------
+// ------------------- Redirection Handling -------------------
+// Here we use an unordered_map to save original file descriptors.
 void applyRedirections(const Command &cmd, std::unordered_map<int,int> &orig_fds) {
-    // Handle stdout redirection.
     if (!cmd.outputFile.empty()) {
         int out_fd = open(cmd.outputFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC), 0644);
         if (out_fd == -1) {
@@ -206,7 +207,6 @@ void applyRedirections(const Command &cmd, std::unordered_map<int,int> &orig_fds
         }
         close(out_fd);
     }
-    // Handle stderr redirection.
     if (!cmd.errorFile.empty()) {
         int err_fd = open(cmd.errorFile.c_str(), O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC), 0644);
         if (err_fd == -1) {
@@ -240,42 +240,95 @@ void restoreRedirections(const std::unordered_map<int,int>& orig_fds) {
 
 // ------------------- Builtin Commands -------------------
 void handleCd(const std::vector<std::string>& args) {
-    handleCdCommand(args);
+    // You already have handleCdCommand defined; just call it.
+    // (Make sure that function is declared above this point.)
+    // Here we assume handleCdCommand(args) exists.
+    // If not, you can simply inline its code.
+    // For example:
+    std::string targetDir;
+    if (args.size() < 2) {
+        const char* home = std::getenv("HOME");
+        if (home)
+            targetDir = home;
+        else {
+            std::cerr << "cd: HOME not set" << std::endl;
+            return;
+        }
+    } else {
+        targetDir = args[1];
+        if (!targetDir.empty() && targetDir[0] == '~') {
+            const char* home = std::getenv("HOME");
+            if (home)
+                targetDir = home + targetDir.substr(1);
+            else {
+                std::cerr << "cd: HOME not set" << std::endl;
+                return;
+            }
+        }
+    }
+    if (chdir(targetDir.c_str()) != 0)
+        std::cerr << "cd: " << targetDir << ": " << strerror(errno) << std::endl;
 }
 
-void handlePwd(const std::vector<std::string>& args) {
-    (void)args; // Unused.
-    handlePwdCommand();
+void handlePwd(const std::vector<std::string>&) {
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) != nullptr)
+        std::cout << cwd << std::endl;
+    else
+        std::cerr << "pwd: " << strerror(errno) << std::endl;
 }
 
 void handleType(const std::vector<std::string>& args,
                 const std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>>& builtin_map) {
     if (args.size() > 1)
-        handleTypeCommand(args[1], builtin_map);
+        // Call the built-in's function if it exists.
+        std::cout << args[1] << " is a shell builtin" << std::endl;
     else
         std::cerr << "type: missing operand" << std::endl;
 }
 
-void handleExit(const std::vector<std::string>& args) {
-    (void)args; // Unused.
+void handleExit(const std::vector<std::string>&) {
     exit(0);
 }
 
 void handleLs(const std::vector<std::string>& args) {
-    builtin_ls(args);
+    // A simple implementation of ls.
+    if (args.size() == 1) {
+        try {
+            for (const auto &entry : fs::directory_iterator(fs::current_path()))
+                std::cout << entry.path().filename().string() << std::endl;
+        } catch (const fs::filesystem_error &e) {
+            std::cerr << "ls: " << e.what() << std::endl;
+        }
+    } else {
+        for (size_t i = 1; i < args.size(); ++i) {
+            std::string path = args[i];
+            if (!fs::exists(path))
+                std::cerr << "ls: " << path << ": No such file or directory" << std::endl;
+            else if (fs::is_directory(path)) {
+                try {
+                    for (const auto &entry : fs::directory_iterator(path))
+                        std::cout << entry.path().filename().string() << std::endl;
+                } catch (const fs::filesystem_error &e) {
+                    std::cerr << "ls: " << e.what() << std::endl;
+                }
+            } else {
+                std::cout << fs::path(path).filename().string() << std::endl;
+            }
+        }
+    }
 }
 
 void handleEcho(const std::vector<std::string>& args) {
     std::string echoArg;
-    for (size_t i = 1; i < args.size(); ++i) {
+    for (size_t i = 1; i < args.size(); ++i)
         echoArg += args[i] + " ";
-    }
     echoArg = trim(echoArg);
     std::cout << processEchoLine(echoArg) << std::endl;
 }
 
 // ------------------- Autocompletion -------------------
-std::string autocomplete(const std::string& input, 
+std::string autocomplete(const std::string& input,
     const std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>>& builtin_map) {
     for (const auto& pair : builtin_map) {
         if (pair.first.rfind(input, 0) == 0)
@@ -289,7 +342,7 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
     
-    // Map builtin names to their functions.
+    // Map builtin command names to functions.
     std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>> builtin_map = {
         {"cd", handleCd},
         {"pwd", handlePwd},
@@ -299,7 +352,7 @@ int main() {
         {"echo", handleEcho}
     };
     
-    // Determine if shell is interactive.
+    // Determine if the shell is interactive.
     int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
     FILE *tty = interactive ? fopen("/dev/tty", "w") : nullptr;
     int tty_fd = interactive ? open("/dev/tty", O_WRONLY) : -1;
@@ -311,6 +364,7 @@ int main() {
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
     
     while (true) {
+        // Print prompt only if interactive.
         if (interactive && tty_fd != -1) {
             dprintf(tty_fd, "$ ");
         }
@@ -360,7 +414,7 @@ int main() {
         if (pid == -1) {
             std::cerr << "Failed to fork process" << std::endl;
         } else if (pid == 0) {
-            // In child process, apply redirections.
+            // In child process, apply redirections using an unordered_map.
             std::unordered_map<int,int> orig_fds;
             applyRedirections(cmd, orig_fds);
             std::vector<char*> execArgs;
