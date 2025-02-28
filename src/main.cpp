@@ -208,6 +208,10 @@ void builtin_ls(const std::vector<std::string>& args) {
     }
     for (size_t i = 1; i < args.size(); ++i) {
         std::string path = args[i];
+        // If the argument starts with '-', treat it as an option and skip it.
+        if (!path.empty() && path[0] == '-') {
+            continue;
+        }
         if (!fs::exists(path)) {
             std::cerr << "ls: " << path << ": No such file or directory" << std::endl;
         }
@@ -222,6 +226,7 @@ void builtin_ls(const std::vector<std::string>& args) {
             std::cout << fs::path(path).filename().string() << std::endl;
         }
     }
+    
 }
 
 struct Command {
@@ -369,7 +374,7 @@ int main() {
                         exit(EXIT_FAILURE);
                     }
                     int err_fd = open(cmd.errorFile.c_str(),
-                                      O_WRONLY | O_CREAT | (cmd.appendError ? O_APPEND : O_TRUNC),
+                                      O_WRONLY | O_CREAT | O_APPEND , // Corrected to O_APPEND here directly
                                       0644);
                     if (err_fd == -1) {
                         std::cerr << "Failed to open error file: " << strerror(errno) << std::endl;
